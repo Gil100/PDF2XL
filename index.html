@@ -33,8 +33,8 @@
         <!-- Header -->
         <header class="row bg-primary text-white p-4 mb-4">
             <div class="col-12 text-center">
-                <h1><i class="fas fa-file-pdf"></i> PDF to Excel/CSV Converter</h1>
-                <p class="mb-0">תמיכה מלאה בעברית עם OCR מתקדם</p>
+                <h1><i class="fas fa-file-pdf"></i> PDF to Excel/CSV/Word Converter</h1>
+                <p class="mb-0">תמיכה מלאה בעברית עם OCR מתקדם + תמיכה ב-DOCX</p>
             </div>
         </header>
 
@@ -85,6 +85,7 @@
                                     <select id="outputFormat" class="form-select">
                                         <option value="xlsx">Excel (.xlsx)</option>
                                         <option value="csv">CSV (.csv)</option>
+                                        <option value="docx">Word (.docx)</option>
                                     </select>
                                 </div>
                                 <div class="col-md-6">
@@ -109,6 +110,86 @@
                                         <label class="form-check-label" for="dataValidation">
                                             אמת נתונים אוטומטית
                                         </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Format-specific options -->
+                            <div class="format-options mt-3">
+                                <!-- Excel Options -->
+                                <div id="xlsxOptions" class="format-option-section" style="display: block;">
+                                    <h6><i class="fas fa-file-excel text-success"></i> אפשרויות Excel</h6>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="xlsxHeaders" checked>
+                                                <label class="form-check-label" for="xlsxHeaders">שורת כותרות</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="xlsxFormatting" checked>
+                                                <label class="form-check-label" for="xlsxFormatting">עיצוב תאים</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- CSV Options -->
+                                <div id="csvOptions" class="format-option-section" style="display: none;">
+                                    <h6><i class="fas fa-file-csv text-info"></i> אפשרויות CSV</h6>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <label class="form-label">מפריד:</label>
+                                            <select id="csvDelimiter" class="form-select">
+                                                <option value=",">פסיק (,)</option>
+                                                <option value=";">נקודה-פסיק (;)</option>
+                                                <option value="\t">טאב</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-check mt-4">
+                                                <input class="form-check-input" type="checkbox" id="csvBOM" checked>
+                                                <label class="form-check-label" for="csvBOM">BOM (תמיכה בעברית)</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- DOCX Options -->
+                                <div id="docxOptions" class="format-option-section" style="display: none;">
+                                    <h6><i class="fas fa-file-word text-primary"></i> אפשרויות Word</h6>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="docxTable" checked>
+                                                <label class="form-check-label" for="docxTable">יצוא כטבלה</label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="docxRTL" checked>
+                                                <label class="form-check-label" for="docxRTL">כיוון מימין לשמאל</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">גודל גופן:</label>
+                                            <select id="docxFontSize" class="form-select">
+                                                <option value="10">10</option>
+                                                <option value="12" selected>12</option>
+                                                <option value="14">14</option>
+                                                <option value="16">16</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="row mt-2">
+                                        <div class="col-md-12">
+                                            <label class="form-label">גופן:</label>
+                                            <select id="docxFont" class="form-select">
+                                                <option value="David" selected>David</option>
+                                                <option value="Arial">Arial</option>
+                                                <option value="Calibri">Calibri</option>
+                                                <option value="Times New Roman">Times New Roman</option>
+                                            </select>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -181,6 +262,7 @@
                                 <li>תמיכה מלאה בעברית וכיוון RTL</li>
                                 <li>עיבוד מקומי ללא העלאה לשרת</li>
                                 <li>תמיכה בעיבוד קבוצתי של מספר קבצים</li>
+                                <li><strong>חדש!</strong> יצוא לקבצי Word (.docx) עם עיצוב מתקדם</li>
                             </ul>
                         </div>
                     </div>
@@ -196,7 +278,51 @@
         </footer>
     </div>
 
-    <!-- Custom JavaScript -->
-    <script src="script.js"></script>
+    <!-- PDF.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <!-- Tesseract.js for OCR -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4.1.1/dist/tesseract.min.js"></script>
+    <!-- SheetJS for Excel generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- DOCX library for Word documents -->
+    <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.js"></script>
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Core application modules -->
+    <script src="js/exporters/base-exporter.js"></script>
+    <script src="js/exporters/excel-exporter.js"></script>
+    <script src="js/exporters/csv-exporter.js"></script>
+    <script src="js/exporters/docx-exporter.js"></script>
+    <script src="js/core.js"></script>
+
+    <!-- Application initialization -->
+    <script>
+        // Configure PDF.js worker
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        
+        // Initialize the converter when DOM is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            window.converter = new PDFConverterCore();
+            console.log('PDF Converter with DOCX support initialized successfully!');
+        });
+
+        // Error handling for uncaught errors
+        window.addEventListener('error', (event) => {
+            console.error('Uncaught error:', event.error);
+            if (window.converter) {
+                window.converter.showError('שגיאה לא צפויה. אנא נסה שוב.');
+            }
+        });
+
+        // Handle promise rejections
+        window.addEventListener('unhandledrejection', (event) => {
+            console.error('Unhandled promise rejection:', event.reason);
+            if (window.converter) {
+                window.converter.showError('שגיאה בעיבוד. אנא נסה שוב.');
+            }
+            event.preventDefault();
+        });
+    </script>
 </body>
 </html>

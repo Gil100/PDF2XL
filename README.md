@@ -1,11 +1,11 @@
-# PDF to Excel/CSV Converter with Hebrew OCR Support
+# PDF to Excel/CSV/Word Converter with Hebrew OCR Support
 
-A modern, client-side web application that converts PDF files to Excel (.xlsx) or CSV formats with full Hebrew language support and OCR capabilities.
+A modern, client-side web application that converts PDF files to Excel (.xlsx), CSV, or Word (.docx) formats with full Hebrew language support and OCR capabilities.
 
 ## 🌟 Features
 
 ### Core Functionality
-- **PDF to Excel/CSV Conversion**: Convert PDF files to structured spreadsheet formats
+- **PDF to Excel/CSV/Word Conversion**: Convert PDF files to structured spreadsheet or document formats
 - **Hebrew OCR Support**: Advanced OCR with right-to-left (RTL) text recognition
 - **Batch Processing**: Process multiple PDF files simultaneously
 - **Live Preview**: Preview converted data before downloading
@@ -20,7 +20,7 @@ A modern, client-side web application that converts PDF files to Excel (.xlsx) o
 
 ### Supported Formats
 - **Input**: PDF files (text-based and image-based)
-- **Output**: Excel (.xlsx) and CSV (.csv)
+- **Output**: Excel (.xlsx), CSV (.csv), and Word (.docx)
 - **Languages**: Hebrew, English, and mixed content
 
 ## 🚀 Quick Start
@@ -51,6 +51,7 @@ PDF2XL/
 - **PDF.js v3.11.174**: PDF parsing and rendering
 - **Tesseract.js v4.1.1**: OCR with Hebrew language support
 - **SheetJS v0.18.5**: Excel file generation
+- **DocX v8.5.0**: Word document generation with RTL support
 - **Bootstrap v5.3.2**: UI framework with RTL support
 - **Font Awesome v6.4.0**: Icons
 
