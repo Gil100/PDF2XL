@@ -2,6 +2,14 @@
 
 A modern, client-side web application that converts PDF files to Excel (.xlsx), CSV, or Word (.docx) formats with full Hebrew language support and OCR capabilities.
 
+## 🆕 Latest Updates (v2.0.0)
+
+- **🎯 DOCX Export Added**: Full Word document support with Hebrew RTL
+- **🔧 Robust Architecture**: Modular design with automatic fallbacks  
+- **🛡️ Error Resilience**: Multiple CDN sources and RTF fallback for DOCX
+- **🎨 Enhanced UI**: Format-specific options and better user feedback
+- **📚 Comprehensive Docs**: Detailed testing and troubleshooting guides
+
 ## 🌟 Features
 
 ### Core Functionality
@@ -103,11 +111,15 @@ To add OCR support for additional languages:
 2. Modify the OCR initialization in `script.js`
 3. Ensure Tesseract.js supports the target language
 
-## 🐛 Troubleshooting
+## 🔧 Troubleshooting
 
-### Common Issues
+### Common Issues:
 
-**OCR Not Working**
+**DOCX Export Problems:**
+- See our comprehensive [DOCX Troubleshooting Guide](DOCX_TROUBLESHOOTING.md)
+- The app includes automatic RTF fallback for maximum compatibility
+
+**OCR Not Working:**
 - Ensure stable internet connection for initial Tesseract download
 - Check browser console for error messages
 - Try refreshing the page to reinitialize OCR
