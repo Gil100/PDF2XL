@@ -438,7 +438,7 @@ class PDFConverterCore {
             
             // הודעה מיוחדת עבור DOCX
             if (format === 'docx') {
-                this.showInfo('מתחיל יצוא לפורמט Word. ייתכן חשש ל-RTF במקרה של בעיה בספריית DOCX');
+                this.showInfo('מתחיל יצוא לפורמט Word. במקרה של בעיה, הקובץ יורד כ-DOC תואם Word');
             }
             
             const result = await this.exportWithFormat(fileData.data, format, {

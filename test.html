@@ -383,8 +383,8 @@
                     results.innerHTML += '<div class="status success">✅ Full DOCX library available - advanced Word export ready</div>';
                     results.innerHTML += '<div class="status info">📝 Test: Upload a PDF and select DOCX format for complete testing</div>';
                 } else if (typeof window.SimpleDOCXExporter !== 'undefined') {
-                    results.innerHTML += '<div class="status warning">⚠️ Using RTF fallback for Word export (DOCX library unavailable)</div>';
-                    results.innerHTML += '<div class="status info">📝 Files will be exported as RTF format, compatible with Word</div>';
+                    results.innerHTML += '<div class="status warning">⚠️ Using HTML-to-Word fallback (DOCX library unavailable)</div>';
+                    results.innerHTML += '<div class="status info">📝 Files will be exported as DOC format, fully compatible with Word</div>';
                 } else {
                     results.innerHTML += '<div class="status error">❌ Neither DOCX nor RTF fallback available</div>';
                 }
