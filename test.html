@@ -73,6 +73,10 @@
                 <div id="sheetjsTest" class="status info">Testing...</div>
             </div>
             <div class="test-result">
+                <h4>DocX (Word) 🆕</h4>
+                <div id="docxTest" class="status info">Testing...</div>
+            </div>
+            <div class="test-result">
                 <h4>Bootstrap & Font Awesome</h4>
                 <div id="uiTest" class="status info">Testing...</div>
             </div>
@@ -125,6 +129,7 @@
             <button onclick="testSamplePDF()">📄 Test with Sample PDF</button>
             <button onclick="testHebrewText()">🔤 Test Hebrew OCR</button>
             <button onclick="testBatchProcessing()">📚 Test Batch Processing</button>
+            <button onclick="testDOCXExport()">📝 Test DOCX Export</button>
             <div id="performanceResults"></div>
         </div>
     </div>
@@ -208,6 +213,30 @@
             } catch (error) {
                 updateStatus('sheetjsTest', 'error', '❌ SheetJS failed to load');
                 testResults.libraries.sheetjs = false;
+            }
+        }
+
+        async function testDocX() {
+            try {
+                const script = document.createElement('script');
+                script.src = 'https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.js';
+                document.head.appendChild(script);
+                
+                await new Promise((resolve, reject) => {
+                    script.onload = resolve;
+                    script.onerror = reject;
+                    setTimeout(reject, 5000);
+                });
+
+                if (typeof docx !== 'undefined') {
+                    updateStatus('docxTest', 'success', '✅ DocX library loaded successfully');
+                    testResults.libraries.docx = true;
+                } else {
+                    throw new Error('DocX library not available');
+                }
+            } catch (error) {
+                updateStatus('docxTest', 'error', '❌ DocX library failed to load');
+                testResults.libraries.docx = false;
             }
         }
 
@@ -343,9 +372,20 @@
             }
         }
 
-        function testBatchProcessing() {
+        function testDOCXExport() {
             const results = document.getElementById('performanceResults');
-            results.innerHTML += '<div class="status info">📚 Batch processing test would require multiple PDF files...</div>';
+            
+            // Test basic DOCX functionality
+            try {
+                if (typeof docx !== 'undefined') {
+                    results.innerHTML += '<div class="status success">✅ DOCX library available - ready for export testing</div>';
+                    results.innerHTML += '<div class="status info">📝 To test DOCX export fully, upload a PDF file and select DOCX format</div>';
+                } else {
+                    results.innerHTML += '<div class="status error">❌ DOCX library not loaded</div>';
+                }
+            } catch (error) {
+                results.innerHTML += '<div class="status error">❌ DOCX test failed: ' + error.message + '</div>';
+            }
         }
 
         // Utility Functions
@@ -378,7 +418,7 @@
                     📊 Test Results: ${passed}/${total} tests passed (${percentage}%)
                 </div>
                 <div style="margin-top: 10px;">
-                    <strong>Libraries:</strong> ${Object.values(testResults.libraries).filter(r => r).length}/${Object.keys(testResults.libraries).length} ✅<br>
+                    <strong>Libraries:</strong> ${Object.values(testResults.libraries).filter(r => r).length}/${Object.keys(testResults.libraries).length} ✅ (includes DOCX support)<br>
                     <strong>Browser:</strong> ${Object.values(testResults.browser).filter(r => r).length}/${Object.keys(testResults.browser).length} ✅<br>
                     <strong>Deployment:</strong> ${Object.values(testResults.deployment).filter(r => r).length}/${Object.keys(testResults.deployment).length} ✅
                 </div>
@@ -403,6 +443,7 @@
                 testPDFjs(),
                 testTesseract(),
                 testSheetJS(),
+                testDocX(), // New DOCX test
                 testUI()
             ]);
 
