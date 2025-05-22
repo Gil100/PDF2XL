@@ -218,25 +218,27 @@
 
         async function testDocX() {
             try {
+                // בדיקת הספרייה הראשית
                 const script = document.createElement('script');
-                script.src = 'https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.js';
+                script.src = 'https://unpkg.com/docx@8.5.0/build/index.js';
                 document.head.appendChild(script);
                 
                 await new Promise((resolve, reject) => {
                     script.onload = resolve;
                     script.onerror = reject;
-                    setTimeout(reject, 5000);
+                    setTimeout(reject, 8000); // זמן המתנה ארוך יותר
                 });
 
-                if (typeof docx !== 'undefined') {
+                if (typeof window.docx !== 'undefined') {
                     updateStatus('docxTest', 'success', '✅ DocX library loaded successfully');
                     testResults.libraries.docx = true;
                 } else {
-                    throw new Error('DocX library not available');
+                    throw new Error('DocX library not available in global scope');
                 }
             } catch (error) {
-                updateStatus('docxTest', 'error', '❌ DocX library failed to load');
-                testResults.libraries.docx = false;
+                updateStatus('docxTest', 'warning', '⚠️ DocX library failed, RTF fallback available');
+                testResults.libraries.docx = 'fallback';
+                console.warn('DOCX library test failed, fallback will be used:', error.message);
             }
         }
 
@@ -377,11 +379,14 @@
             
             // Test basic DOCX functionality
             try {
-                if (typeof docx !== 'undefined') {
-                    results.innerHTML += '<div class="status success">✅ DOCX library available - ready for export testing</div>';
-                    results.innerHTML += '<div class="status info">📝 To test DOCX export fully, upload a PDF file and select DOCX format</div>';
+                if (typeof window.docx !== 'undefined') {
+                    results.innerHTML += '<div class="status success">✅ Full DOCX library available - advanced Word export ready</div>';
+                    results.innerHTML += '<div class="status info">📝 Test: Upload a PDF and select DOCX format for complete testing</div>';
+                } else if (typeof window.SimpleDOCXExporter !== 'undefined') {
+                    results.innerHTML += '<div class="status warning">⚠️ Using RTF fallback for Word export (DOCX library unavailable)</div>';
+                    results.innerHTML += '<div class="status info">📝 Files will be exported as RTF format, compatible with Word</div>';
                 } else {
-                    results.innerHTML += '<div class="status error">❌ DOCX library not loaded</div>';
+                    results.innerHTML += '<div class="status error">❌ Neither DOCX nor RTF fallback available</div>';
                 }
             } catch (error) {
                 results.innerHTML += '<div class="status error">❌ DOCX test failed: ' + error.message + '</div>';

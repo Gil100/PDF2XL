@@ -436,9 +436,19 @@ class PDFConverterCore {
             const fileData = this.processedData[0];
             const format = document.getElementById('outputFormat')?.value || 'xlsx';
             
-            await this.exportWithFormat(fileData.data, format, {
+            // הודעה מיוחדת עבור DOCX
+            if (format === 'docx') {
+                this.showInfo('מתחיל יצוא לפורמט Word. ייתכן חשש ל-RTF במקרה של בעיה בספריית DOCX');
+            }
+            
+            const result = await this.exportWithFormat(fileData.data, format, {
                 fileName: fileData.fileName.replace('.pdf', '')
             });
+            
+            // הודעה על הצלחה עם פרטים
+            if (result.note) {
+                this.showInfo(result.note);
+            }
             
         } catch (error) {
             this.showError(`שגיאה בהורדה: ${error.message}`);
@@ -746,6 +756,30 @@ class PDFConverterCore {
     hideError() {
         const errorSection = document.getElementById('errorSection');
         if (errorSection) errorSection.style.display = 'none';
+    }
+
+    showInfo(message) {
+        // יצירת הודעת מידע זמנית
+        const infoDiv = document.createElement('div');
+        infoDiv.className = 'alert alert-info alert-dismissible fade show position-fixed';
+        infoDiv.style.top = '20px';
+        infoDiv.style.right = '20px';
+        infoDiv.style.zIndex = '9999';
+        infoDiv.style.maxWidth = '400px';
+        
+        infoDiv.innerHTML = `
+            <i class="fas fa-info-circle"></i> ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        document.body.appendChild(infoDiv);
+        
+        // הסרה אוטומטית אחרי 5 שניות
+        setTimeout(() => {
+            if (infoDiv.parentNode) {
+                infoDiv.parentNode.removeChild(infoDiv);
+            }
+        }, 5000);
     }
 
     log(message, level = 'info') {

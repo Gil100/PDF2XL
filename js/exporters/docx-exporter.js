@@ -10,21 +10,50 @@ class DOCXExporter extends BaseExporter {
     async initialize() {
         this.log('Initializing DOCX exporter...');
         
-        // טעינת ספריית docx
-        if (typeof docx === 'undefined') {
-            await this.loadScript(
-                'https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.js',
-                'docx'
-            );
+        // בדיקה אם הספרייה כבר טעונה
+        if (typeof window.docx !== 'undefined') {
+            this.docxLoaded = true;
+            this.log('DOCX library already loaded');
+            return;
         }
 
-        this.docxLoaded = true;
-        this.log('DOCX exporter ready');
+        // רשימת CDN לנסות
+        const cdnUrls = [
+            'https://unpkg.com/docx@8.5.0/build/index.js',
+            'https://cdn.skypack.dev/docx@8.5.0',
+            'https://esm.sh/docx@8.5.0'
+        ];
+
+        // ניסיון טעינה מכמה CDN שונים
+        for (const url of cdnUrls) {
+            try {
+                this.log(`Trying to load DOCX from: ${url}`);
+                await this.loadScript(url, 'docx');
+                
+                if (typeof window.docx !== 'undefined') {
+                    this.docxLoaded = true;
+                    this.log('DOCX library loaded successfully from: ' + url);
+                    return;
+                }
+            } catch (error) {
+                this.log(`Failed to load from ${url}: ${error.message}`, 'warn');
+                continue;
+            }
+        }
+
+        // אם כל הניסיונות נכשלו
+        throw new Error('Failed to load DOCX library from all CDN sources');
     }
 
     async export(data, options = {}) {
         try {
             await this.ensureReady();
+            
+            // בדיקה נוספת שהספרייה זמינה וישימה
+            if (!this.isDocxAvailable()) {
+                this.log('Main DOCX library not available, trying fallback', 'warn');
+                return await this.exportWithFallback(data, options);
+            }
             
             this.log('Starting DOCX export', 'debug');
             
@@ -49,7 +78,145 @@ class DOCXExporter extends BaseExporter {
             
         } catch (error) {
             this.log(`DOCX export failed: ${error.message}`, 'error');
-            throw new Error(this.createUserFriendlyError(error, 'ייצוא Word'));
+            
+            // ניסיון fallback
+            try {
+                this.log('Trying fallback DOCX export', 'warn');
+                return await this.exportWithFallback(data, options);
+            } catch (fallbackError) {
+                this.log(`Fallback also failed: ${fallbackError.message}`, 'error');
+                throw new Error(this.createUserFriendlyError(error, 'ייצוא Word'));
+            }
+        }
+    }
+
+    // ייצוא עם fallback פשוט יותר (RTF במקום DOCX)
+    async exportWithFallback(data, options = {}) {
+        this.log('Using RTF fallback export method', 'warn');
+        
+        const fileName = options.fileName || this.generateFileName('converted_data', 'rtf');
+        const normalizedData = this.normalizeData(data);
+        
+        // יצירת קובץ RTF עם תמיכה בעברית
+        const rtfContent = this.createRTFDocument(normalizedData, options);
+        
+        // הורדת הקובץ
+        const blob = new Blob([rtfContent], {
+            type: 'application/rtf'
+        });
+        
+        this.downloadBlob(blob, fileName.replace('.docx', '.rtf'));
+        
+        this.log(`RTF fallback export completed: ${fileName}`);
+        
+        return {
+            success: true,
+            fileName: fileName.replace('.docx', '.rtf'),
+            format: 'rtf',
+            note: 'ייצוא בוצע בפורמט RTF כחלופה ל-DOCX'
+        };
+    }
+
+    // יצירת מסמך RTF פשוט עם תמיכה בעברית
+    createRTFDocument(data, options = {}) {
+        const settings = {
+            rtl: options.rtl !== false,
+            fontSize: (options.fontSize || 12) * 2, // RTF uses half-points
+            fontFamily: options.fontFamily || 'David',
+            asTable: options.asTable !== false,
+            title: options.title || 'מסמך מומר מ-PDF'
+        };
+
+        let rtf = '{\\rtf1\\ansi\\deff0 {\\fonttbl {\\f0 ' + settings.fontFamily + ';}}';
+        rtf += '\\f0\\fs' + settings.fontSize;
+        
+        if (settings.rtl) {
+            rtf += '\\rtlpar\\qr '; // RTL paragraph alignment
+        }
+
+        // כותרת
+        if (settings.title) {
+            rtf += '\\b ' + this.escapeRTF(settings.title) + '\\b0\\par\\par ';
+        }
+
+        // תוכן
+        if (settings.asTable && data.length > 0) {
+            rtf += this.createRTFTable(data, settings);
+        } else {
+            rtf += this.createRTFParagraphs(data, settings);
+        }
+
+        rtf += '}';
+        return rtf;
+    }
+
+    createRTFTable(data, settings) {
+        let table = '';
+        
+        data.forEach((row, rowIndex) => {
+            table += '\\trowd\\trgaph120\\trleft0 ';
+            
+            // הגדרת עמודות
+            const cellWidth = Math.floor(9000 / row.length);
+            for (let i = 0; i < row.length; i++) {
+                table += '\\cellx' + ((i + 1) * cellWidth) + ' ';
+            }
+            
+            // תוכן השורה
+            row.forEach(cell => {
+                const cellText = this.escapeRTF(String(cell || ''));
+                if (settings.rtl) {
+                    table += '\\rtlch\\ltrch ' + cellText + '\\cell ';
+                } else {
+                    table += cellText + '\\cell ';
+                }
+            });
+            
+            table += '\\row ';
+        });
+        
+        return table;
+    }
+
+    createRTFParagraphs(data, settings) {
+        let paragraphs = '';
+        
+        data.forEach(row => {
+            const text = Array.isArray(row) ? row.join(' | ') : String(row);
+            const escapedText = this.escapeRTF(text);
+            
+            if (settings.rtl) {
+                paragraphs += '\\rtlpar\\qr ' + escapedText + '\\par ';
+            } else {
+                paragraphs += escapedText + '\\par ';
+            }
+        });
+        
+        return paragraphs;
+    }
+
+    escapeRTF(text) {
+        return text
+            .replace(/\\/g, '\\\\')
+            .replace(/{/g, '\\{')
+            .replace(/}/g, '\\}')
+            .replace(/\n/g, '\\par ')
+            .replace(/\r/g, '');
+    }
+
+    // בדיקה שהספרייה זמינה ופועלת
+    isDocxAvailable() {
+        try {
+            const docx = window.docx;
+            return docx && 
+                   typeof docx.Document === 'function' && 
+                   typeof docx.Paragraph === 'function' && 
+                   typeof docx.TextRun === 'function' &&
+                   typeof docx.Table === 'function' &&
+                   typeof docx.Packer === 'object';
+        } catch (error) {
+            this.log(`DOCX availability check failed: ${error.message}`, 'error');
+            return false;
         }
     }
 
@@ -101,7 +268,7 @@ class DOCXExporter extends BaseExporter {
         return document;
     }
 
-    createTitle(titleText, settings) {
+    createTitle(titleText, settings, docx) {
         return new docx.Paragraph({
             children: [
                 new docx.TextRun({
@@ -117,16 +284,16 @@ class DOCXExporter extends BaseExporter {
         });
     }
 
-    createTable(data, settings) {
+    createTable(data, settings, docx) {
         if (!data || data.length === 0) {
-            return this.createParagraph('אין נתונים להצגה', settings);
+            return this.createParagraph('אין נתונים להצגה', settings, docx);
         }
 
         // יצירת שורות הטבלה
         const tableRows = data.map((row, rowIndex) => {
             return new docx.TableRow({
                 children: row.map((cell, cellIndex) => {
-                    return this.createTableCell(cell, rowIndex === 0, settings);
+                    return this.createTableCell(cell, rowIndex === 0, settings, docx);
                 })
             });
         });
@@ -138,13 +305,13 @@ class DOCXExporter extends BaseExporter {
                 size: 100,
                 type: docx.WidthType.PERCENTAGE,
             },
-            borders: this.createTableBorders(),
+            borders: this.createTableBorders(docx),
             layout: docx.TableLayoutType.AUTOFIT,
             columnWidths: this.calculateColumnWidths(data),
         });
     }
 
-    createTableCell(cellText, isHeader, settings) {
+    createTableCell(cellText, isHeader, settings, docx) {
         const text = this.cleanHebrewText(String(cellText || ''));
         const isHebrew = this.isHebrewText(text);
         
@@ -178,7 +345,7 @@ class DOCXExporter extends BaseExporter {
         });
     }
 
-    createTableBorders() {
+    createTableBorders(docx) {
         const borderStyle = {
             style: docx.BorderStyle.SINGLE,
             size: 1,
@@ -275,6 +442,8 @@ class DOCXExporter extends BaseExporter {
 
     async downloadDocument(document, fileName) {
         try {
+            const docx = window.docx; // התייחסות לספרייה הגלובלית
+            
             // יצירת הקובץ
             const buffer = await docx.Packer.toBuffer(document);
             
