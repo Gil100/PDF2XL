@@ -1,0 +1,36 @@
+# GitHub Pages Configuration
+# This file ensures proper deployment settings
+
+# Build settings
+markdown: kramdown
+highlighter: rouge
+
+# Site settings
+title: "PDF to Excel/CSV Converter"
+description: "Convert PDF files to Excel/CSV with Hebrew OCR support"
+baseurl: ""
+url: "https://yourusername.github.io"
+
+# GitHub Pages settings
+plugins:
+  - jekyll-sitemap
+  - jekyll-feed
+
+# Exclude files from processing
+exclude:
+  - README.md
+  - .gitignore
+  - .git/
+
+# Include files
+include:
+  - index.html
+  - styles.css
+  - script.js
+
+# Encoding
+encoding: utf-8
+
+# Language and locale
+lang: he
+locale: he_IL

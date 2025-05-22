@@ -1,0 +1,46 @@
+{
+  "name": "pdf-to-excel-converter",
+  "version": "1.0.0",
+  "description": "PDF to Excel/CSV converter with Hebrew OCR support",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx serve .",
+    "dev": "npx live-server .",
+    "build": "echo 'No build process needed - static files only'",
+    "test": "echo 'Tests not implemented yet'",
+    "deploy": "gh-pages -d ."
+  },
+  "keywords": [
+    "pdf",
+    "excel",
+    "csv",
+    "ocr",
+    "hebrew",
+    "converter",
+    "client-side"
+  ],
+  "author": "PDF Converter Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/PDF2XL.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/PDF2XL/issues"
+  },
+  "homepage": "https://yourusername.github.io/PDF2XL",
+  "devDependencies": {
+    "gh-pages": "^6.0.0",
+    "live-server": "^1.2.2",
+    "serve": "^14.2.1"
+  },
+  "browserslist": [
+    "> 1%",
+    "last 2 versions",
+    "not dead",
+    "not ie <= 11"
+  ],
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
