@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DOCX Test</title>
+</head>
+<body>
+    <h1>בדיקת ספריית DOCX</h1>
+    <button onclick="testDocx()">בדוק DOCX</button>
+    <div id="status"></div>
+
+    <!-- Load DOCX library -->
+    <script>
+        // Test DOCX library loading
+        (function() {
+            const docxSources = [
+                'https://unpkg.com/docx@8.5.0/build/index.js',
+                'https://cdnjs.cloudflare.com/ajax/libs/docx/8.5.0/docx.min.js',
+                'js/libs/docx.js'
+            ];
+            
+            let currentIndex = 0;
+            
+            function loadNext() {
+                if (currentIndex >= docxSources.length) {
+                    document.getElementById('status').innerHTML = '❌ כל המקורות נכשלו';
+                    return;
+                }
+                
+                const script = document.createElement('script');
+                script.src = docxSources[currentIndex];
+                
+                script.onload = function() {
+                    document.getElementById('status').innerHTML = '✅ DOCX נטען מ: ' + docxSources[currentIndex];
+                };
+                
+                script.onerror = function() {
+                    currentIndex++;
+                    loadNext();
+                };
+                
+                document.head.appendChild(script);
+            }
+            
+            loadNext();
+        })();
+
+        function testDocx() {
+            const status = document.getElementById('status');
+            
+            if (typeof window.docx === 'undefined') {
+                status.innerHTML = '❌ ספריית DOCX לא זמינה';
+                return;
+            }
+
+            try {
+                // Test creating a simple document
+                const doc = new window.docx.Document({
+                    sections: [{
+                        children: [
+                            new window.docx.Paragraph({
+                                children: [
+                                    new window.docx.TextRun({
+                                        text: "טקסט בעברית לבדיקה",
+                                        font: "David"
+                                    })
+                                ]
+                            })
+                        ]
+                    }]
+                });
+                
+                status.innerHTML = '✅ ספריית DOCX עובדת תקין!';
+                
+                // Try to create buffer
+                window.docx.Packer.toBuffer(doc).then(buffer => {
+                    status.innerHTML += '<br>✅ יצירת קובץ הצליחה!';
+                }).catch(err => {
+                    status.innerHTML += '<br>❌ שגיאה ביצירת קובץ: ' + err.message;
+                });
+                
+            } catch (error) {
+                status.innerHTML = '❌ שגיאה: ' + error.message;
+            }
+        }
+    </script>
+</body>
+</html>

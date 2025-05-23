@@ -6,14 +6,23 @@ A modern, client-side web application that converts PDF files to Excel (.xlsx), 
 
 A modern, client-side web application that converts PDF files to Excel (.xlsx), CSV, or Word (.docx) formats with full Hebrew language support and OCR capabilities.
 
-## 🆕 Latest Updates (v2.2.0 - May 2025)
+## 🆕 Latest Updates (v2.2.1 - May 2025)
 
-### ✅ Major DOCX Export Fixes:
-- **🔧 DOCX Library Upgrade**: Updated to modern docx@8.5.0 with CDN reliability
-- **🔤 Hebrew Encoding Fix**: Resolved gibberish text issues in Hebrew content
-- **📄 Real DOCX Files**: Now generates proper Word documents that open correctly
-- **⚡ Smart Fallback**: Automatic RTF fallback when main library unavailable
-- **🛡️ Error Resilience**: Enhanced error handling with detailed debugging
+### ✅ Critical DOCX Export Fixes (v2.2.1):
+- **🔧 Syntax Error Fix**: Resolved JavaScript syntax errors in docx-exporter.js that prevented loading
+- **📡 Multi-Source CDN Loading**: Intelligent failover system using unpkg.com, cdnjs.com, and local fallback
+- **🛡️ Dependency Validation**: Enhanced initialization with proper class availability checking
+- **⚡ Protected Startup**: Added safeguards against initialization failures with delayed retry mechanism
+- **🔍 Enhanced Debugging**: Detailed console logging for troubleshooting DOCX loading issues
+- **🔄 Robust Fallback**: Automatic RTF export when native DOCX library fails
+
+### ✅ Major DOCX Export Fixes (v2.2.0):
+- **🔧 DOCX Library Upgrade**: Updated to modern docx@8.5.0 with multiple CDN sources and auto-fallback
+- **🔤 Hebrew Encoding Fix**: Resolved gibberish text issues in Hebrew content with enhanced cleaning
+- **📄 Real DOCX Files**: Now generates proper Word documents that open correctly in Microsoft Word
+- **⚡ Smart Multi-Source Loading**: Automatic failover between CDN sources (unpkg, cdnjs, local)
+- **🛡️ Error Resilience**: Enhanced error handling with detailed debugging and dependency checking
+- **🔄 Initialization Safeguards**: Protected startup sequence with proper dependency validation
 
 ### 🎯 Performance Improvements:
 - Faster initialization with timeout mechanisms
@@ -68,15 +77,17 @@ PDF2XL/
 ├── index.html              # Main application file
 ├── styles.css              # Custom styling and RTL support
 ├── script.js               # Legacy core functionality
+├── test-docx.html          # DOCX library testing tool (NEW)
 ├── js/                     # Enhanced modular structure
 │   ├── core.js             # Core application logic
 │   ├── libs/               # Local libraries
-│   │   └── docx.js         # Local copy of DOCX library
+│   │   ├── docx.js         # Local copy of DOCX library
+│   │   └── docx.min.js     # Minified version
 │   └── exporters/          # Export modules
 │       ├── base-exporter.js    # Base exporter class
 │       ├── excel-exporter.js   # Excel export functionality
 │       ├── csv-exporter.js     # CSV export functionality
-│       └── docx-exporter.js    # DOCX export functionality
+│       └── docx-exporter.js    # DOCX export functionality (UPDATED)
 └── README.md               # This documentation
 ```
 
@@ -86,7 +97,7 @@ PDF2XL/
 - **PDF.js v3.11.174**: PDF parsing and rendering (CDN)
 - **Tesseract.js v4.1.1**: OCR with Hebrew language support (CDN)
 - **SheetJS v0.18.5**: Excel file generation (CDN)
-- **DocX v8.5.0**: Word document generation with RTL support (CDN with fallback)
+- **DocX v8.5.0**: Word document generation with RTL support (Multi-CDN: unpkg, cdnjs, local fallback)
 - **Bootstrap v5.3.2**: UI framework with RTL support (CDN)
 - **Font Awesome v6.4.0**: Icons (CDN)
 
@@ -142,12 +153,28 @@ To add OCR support for additional languages:
 
 ### Common Issues:
 
-**DOCX Export Problems:**
-- **Fixed in v2.2.0**: Upgraded to modern DOCX library with automatic fallback
-- Files now generate as proper DOCX format that opens correctly in Microsoft Word
-- Hebrew text encoding issues have been resolved
-- If files still don't open, check that you have Microsoft Word or LibreOffice installed
-- For troubleshooting, check browser console for detailed error messages
+## 🔧 Troubleshooting
+
+### Common Issues:
+
+**DOCX Export Problems (Updated v2.2.1):**
+- **Fixed in v2.2.1**: Resolved critical JavaScript syntax errors and CDN loading issues
+- **Multi-Source Loading**: App now tries unpkg.com → cdnjs.com → local file automatically
+- **Enhanced Validation**: Better error messages in console for debugging
+- **Real DOCX Files**: Generated files open correctly in Microsoft Word with proper Hebrew support
+- **Testing Tool**: Use `test-docx.html` to verify DOCX library functionality
+
+**If DOCX still doesn't work:**
+1. **Clear browser cache** (Ctrl+F5) to reload all scripts
+2. **Check console** for loading messages - should see "DOCX library loaded from: [source]"
+3. **Try test page**: Open `test-docx.html` and click "בדוק DOCX" 
+4. **Verify initialization**: Look for "PDF Converter with DOCX support initialized successfully!"
+
+**New Console Messages to Look For:**
+- ✅ `DOCX library loaded from: [CDN URL]` - Library loaded successfully
+- ✅ `PDF Converter with DOCX support initialized successfully!` - App ready
+- ⚠️ `Failed to load DOCX from: [URL]` - Trying next source (normal)
+- ❌ `All DOCX sources failed` - Will use RTF fallback method
 
 **OCR Not Working:**
 - Ensure stable internet connection for initial Tesseract download
@@ -171,6 +198,25 @@ To add OCR support for additional languages:
 
 ### Browser Console Debugging
 Open browser Developer Tools (F12) and check the Console tab for detailed error messages.
+
+**Expected Messages After v2.2.1 Fix:**
+- `✅ DOCX library loaded from: [URL]` - Shows which CDN source worked
+- `✅ PDF Converter with DOCX support initialized successfully!` - App ready to use
+- `⚠️ Failed to load DOCX from: [URL]` - Normal failover message (not an error)
+
+### Testing DOCX Functionality
+Use the included `test-docx.html` file to verify DOCX library functionality:
+1. Open `test-docx.html` in your browser
+2. Click "בדוק DOCX" button
+3. Should see "✅ ספריית DOCX עובדת תקין!" message
+4. If it shows "✅ יצירת קובץ הצליחה!" then DOCX export is working
+
+### Verifying the Fix
+After loading the main application:
+1. **No JavaScript errors** should appear in console during startup
+2. **DOCX option** should be available in format dropdown
+3. **Export should work** without "format not supported" errors
+4. **Generated files** should open correctly in Microsoft Word
 
 ## 🚀 Deployment Options
 
@@ -263,4 +309,17 @@ For issues and questions:
 
 **Built with ❤️ for the Hebrew-speaking community**
 
-*Last updated: May 2025 - v2.2.0 with major DOCX improvements*
+*Last updated: May 2025 - v2.2.1 with critical DOCX fixes and multi-source loading*
+
+## 🚨 Important Notes for v2.2.1:
+- **Clear browser cache** (Ctrl+F5) after updating to load new scripts
+- **Check console messages** for DOCX library loading status
+- **Use test-docx.html** to verify DOCX functionality if issues persist
+- **Report issues** with console screenshots for faster debugging
+
+## 📞 Support:
+If you encounter issues after this update:
+1. Clear browser cache completely
+2. Check the console for loading messages
+3. Try the DOCX test page
+4. Report issues with console screenshots in GitHub Issues
