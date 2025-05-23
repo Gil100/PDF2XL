@@ -6,28 +6,29 @@ A modern, client-side web application that converts PDF files to Excel (.xlsx), 
 
 A modern, client-side web application that converts PDF files to Excel (.xlsx), CSV, or Word (.docx) formats with full Hebrew language support and OCR capabilities.
 
-## 🆕 Latest Updates (v2.2.3 - May 2025)
+## 🆕 Latest Updates (v2.2.4 - May 2025)
 
-### ✅ Critical DOCX Export Fix & Browser Compatibility (v2.2.3):
-- **🔧 Fixed "nodebuffer not supported"**: Resolved browser compatibility issues with DOCX Packer
-- **📱 Browser-First Approach**: Uses `Packer.toBlob()` instead of `Packer.toBuffer()` for browser compatibility
-- **🔄 Smart Fallback Chain**: Blob → Buffer → Enhanced RTF for maximum compatibility
-- **📄 Improved RTF Export**: Enhanced RTF format with proper Hebrew charset and Word compatibility
-- **✅ Real Word Documents**: Generated files now open correctly in Microsoft Word without errors
-- **🔍 Enhanced Testing**: Updated test-docx.html with comprehensive blob/buffer testing
+### ✅ User Experience Enhancement - "New File" Feature (v2.2.4):
+- **🆕 "New File" Button**: Added convenient reset functionality to start over with new files
+- **🔄 Smart Reset System**: One-click reset clears all data, files, and previews
+- **🎯 Strategic Placement**: Button appears in upload area when files are loaded and download area after processing
+- **✨ Visual Feedback**: Animated reset effects and user notifications
+- **📱 Responsive Design**: Proper button spacing and mobile-friendly layout
+- **🧹 Complete Cleanup**: Resets file inputs, removes drag states, clears processed data
 
-### 🎯 DOCX Export Improvements:
-- **🌐 Browser Compatibility**: Fixed "nodebuffer is not supported by this platform" error
-- **📊 Better RTF Tables**: Enhanced table formatting with proper borders and Hebrew support
-- **🔤 Unicode Handling**: Improved Hebrew text encoding in RTF format
-- **📁 File Extension Security**: Ensures .rtf extension for fallback files (more reliable than fake .docx)
-- **⚡ Faster Generation**: Optimized document creation process
+### 🎨 UI/UX Improvements:
+- **📍 Contextual Buttons**: "New File" button shows only when relevant (files loaded or processing complete)
+- **🎬 Smooth Animations**: Button hover effects and reset animations for better user feedback
+- **📱 Better Mobile Experience**: Improved button spacing and responsive design
+- **💫 Visual Polish**: Enhanced CSS animations for file drop zones during reset
+- **🔔 User Notifications**: Clear feedback when system resets successfully
 
-### 🐛 Major Bug Fixes:
-- **❌ DOCX Generation Errors**: Fixed "Word found unreadable content" errors
-- **🔤 Hebrew Text Corruption**: Fixed gibberish text in exported documents
-- **📁 File Extension Issues**: Guaranteed correct extensions for all export formats
-- **🔧 Console Error Cleanup**: Eliminated nodebuffer-related console errors
+### 🛠️ Technical Enhancements:
+- **🧩 Modular Reset System**: Separate functions for different reset operations
+- **🎯 Event Management**: Proper event binding for multiple "New File" button instances
+- **📊 State Management**: Complete application state reset functionality
+- **🔄 Animation Framework**: CSS keyframe animations for visual feedback
+- **🎨 Enhanced Styling**: New CSS classes for button interactions and reset effects
 
 ### ✅ Major DOCX Export Fixes (v2.2.0):
 - **🔧 DOCX Library Upgrade**: Updated to modern docx@8.5.0 with multiple CDN sources and auto-fallback

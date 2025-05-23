@@ -131,6 +131,8 @@ class PDFConverterCore {
         const processBtn = document.getElementById('processBtn');
         const downloadBtn = document.getElementById('downloadBtn');
         const downloadAllBtn = document.getElementById('downloadAllBtn');
+        const newFileBtn = document.getElementById('newFileBtn');
+        const newFileBtn2 = document.getElementById('newFileBtn2');
 
         if (processBtn) {
             processBtn.addEventListener('click', () => this.processFiles());
@@ -142,6 +144,14 @@ class PDFConverterCore {
         
         if (downloadAllBtn) {
             downloadAllBtn.addEventListener('click', () => this.downloadAllFiles());
+        }
+        
+        if (newFileBtn) {
+            newFileBtn.addEventListener('click', () => this.resetToNewFile());
+        }
+        
+        if (newFileBtn2) {
+            newFileBtn2.addEventListener('click', () => this.resetToNewFile());
         }
     }
 
@@ -568,8 +578,15 @@ class PDFConverterCore {
 
     updateProcessButton() {
         const processBtn = document.getElementById('processBtn');
+        const newFileBtn = document.getElementById('newFileBtn');
+        
         if (processBtn) {
             processBtn.disabled = this.files.length === 0 || this.isProcessing;
+        }
+        
+        // הצגת כפתור "קובץ חדש" כשיש קבצים
+        if (newFileBtn) {
+            newFileBtn.style.display = this.files.length > 0 ? 'inline-block' : 'none';
         }
     }
 
@@ -691,11 +708,17 @@ class PDFConverterCore {
     showDownloadButtons() {
         const downloadBtn = document.getElementById('downloadBtn');
         const downloadAllBtn = document.getElementById('downloadAllBtn');
+        const newFileBtn2 = document.getElementById('newFileBtn2');
         
         if (downloadBtn) downloadBtn.style.display = 'inline-block';
         
         if (downloadAllBtn && this.processedData.length > 1) {
             downloadAllBtn.style.display = 'inline-block';
+        }
+        
+        // הצגת כפתור "קובץ חדש" באזור ההורדות
+        if (newFileBtn2) {
+            newFileBtn2.style.display = 'inline-block';
         }
     }
 
@@ -813,6 +836,88 @@ class PDFConverterCore {
         }, 5000);
     }
 
+    // אפיון מערכת לקובץ חדש
+    resetToNewFile() {
+        this.log('Resetting to new file mode', 'debug');
+        
+        // איפוס כל הנתונים
+        this.files = [];
+        this.processedData = [];
+        
+        // איפוס ממשק המשתמש
+        this.updateFileList();
+        this.updateProcessButton();
+        this.hideProgress();
+        this.hideError();
+        this.hidePreview();
+        this.hideDownloadButtons();
+        this.hideNewFileButtons();
+        
+        // איפוס שדות הקלט
+        this.resetFileInputs();
+        
+        // הצגת חזרה לרכיב המידע
+        const infoSection = document.getElementById('infoSection');
+        if (infoSection) {
+            infoSection.style.display = 'block';
+        }
+        
+        // הודעת מידע למשתמש
+        this.showInfo('המערכת אופסה - ניתן להעלות קבצים חדשים');
+        
+        this.log('System reset completed');
+    }
+
+    // הסתרת תצוגה מקדימה
+    hidePreview() {
+        const previewSection = document.getElementById('previewSection');
+        if (previewSection) {
+            previewSection.style.display = 'none';
+        }
+    }
+
+    // הסתרת כפתורי הורדה
+    hideDownloadButtons() {
+        const downloadBtn = document.getElementById('downloadBtn');
+        const downloadAllBtn = document.getElementById('downloadAllBtn');
+        
+        if (downloadBtn) downloadBtn.style.display = 'none';
+        if (downloadAllBtn) downloadAllBtn.style.display = 'none';
+    }
+
+    // הסתרת כפתורי "קובץ חדש"
+    hideNewFileButtons() {
+        const newFileBtn = document.getElementById('newFileBtn');
+        const newFileBtn2 = document.getElementById('newFileBtn2');
+        
+        if (newFileBtn) newFileBtn.style.display = 'none';
+        if (newFileBtn2) newFileBtn2.style.display = 'none';
+    }
+
+    // איפוס שדות העלאת קבצים
+    resetFileInputs() {
+        const fileInput = document.getElementById('fileInput');
+        const batchFileInput = document.getElementById('batchFileInput');
+        
+        if (fileInput) fileInput.value = '';
+        if (batchFileInput) batchFileInput.value = '';
+        
+        // הסרת מחלקות drag-over ואפקט איפוס
+        const dropZone = document.getElementById('dropZone');
+        const batchDropZone = document.getElementById('batchDropZone');
+        
+        if (dropZone) {
+            dropZone.classList.remove('dragover');
+            dropZone.classList.add('reset-animation');
+            setTimeout(() => dropZone.classList.remove('reset-animation'), 500);
+        }
+        
+        if (batchDropZone) {
+            batchDropZone.classList.remove('dragover');
+            batchDropZone.classList.add('reset-animation');
+            setTimeout(() => batchDropZone.classList.remove('reset-animation'), 500);
+        }
+    }
     log(message, level = 'info') {
         const timestamp = new Date().toISOString();
         const prefix = `[PDFConverter] ${timestamp}:`;
@@ -832,8 +937,6 @@ class PDFConverterCore {
         }
     }
 }
-
-// פונקציות legacy לתאימות לאחור
 function downloadAsExcel(data, fileName) {
     if (window.converter && window.converter.exporters.xlsx) {
         return window.converter.exporters.xlsx.export(data, { fileName });

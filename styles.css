@@ -321,6 +321,48 @@ body {
     animation: pulse 2s infinite;
 }
 
+/* New File Button Animations */
+.btn-outline-secondary:hover,
+.btn-outline-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    transition: all 0.3s ease;
+}
+
+/* Button group spacing */
+.btn + .btn {
+    margin-right: 0.5rem;
+}
+
+/* Success message animation */
+.alert.position-fixed {
+    animation: slideInRight 0.3s ease-out;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* File input reset visual feedback */
+.drop-zone.reset-animation {
+    animation: resetPulse 0.5s ease-out;
+}
+
+@keyframes resetPulse {
+    0% { background-color: #e9ecef; }
+    50% { background-color: #d1ecf1; }
+    100% { background-color: transparent; }
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     .container-fluid {
