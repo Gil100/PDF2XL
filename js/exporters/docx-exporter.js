@@ -78,6 +78,7 @@ class DOCXExporter extends BaseExporter {
             
         } catch (error) {
             this.log(`DOCX export failed: ${error.message}`, 'error');
+            console.error("DOCX export error details:", error);
             
             // ניסיון fallback
             try {
@@ -94,7 +95,7 @@ class DOCXExporter extends BaseExporter {
     async exportWithFallback(data, options = {}) {
         this.log('Using enhanced HTML-to-Word fallback export method', 'warn');
         
-        const fileName = options.fileName || this.generateFileName('converted_data', 'doc');
+        const fileName = options.fileName || this.generateFileName('converted_data', 'docx');
         const normalizedData = this.normalizeData(data);
         
         // יצירת קובץ HTML עם Word compatibility headers
@@ -102,18 +103,18 @@ class DOCXExporter extends BaseExporter {
         
         // הורדת הקובץ עם MIME type של Word
         const blob = new Blob([htmlContent], {
-            type: 'application/vnd.ms-word;charset=utf-8'
+            type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
         });
         
-        this.downloadBlob(blob, fileName.replace('.docx', '.doc'));
+        this.downloadBlob(blob, fileName);
         
         this.log(`HTML-Word fallback export completed: ${fileName}`);
         
         return {
             success: true,
-            fileName: fileName.replace('.docx', '.doc'),
-            format: 'doc',
-            note: 'הקובץ יורד כ-DOC ויפתח ב-Word. תוכל לשמור אותו כ-DOCX מתוך Word.'
+            fileName: fileName,
+            format: 'docx',
+            note: 'הקובץ נוצר ויפתח ב-Word. אם יש בעיות בפורמט, ניתן לבחור ב"שמור בשם" כדי לשמור כ-DOCX רגיל.'
         };
     }
 
@@ -162,9 +163,9 @@ table {
     width: 100%;
     direction: ${settings.rtl ? 'rtl' : 'ltr'};
     mso-table-layout-alt: fixed;
-    mso-table-wrap: around;
     mso-table-lspace: 9.0pt;
     mso-table-rspace: 9.0pt;
+    mso-table-layout: fixed;
 }
 td, th {
     border: 1px solid #999999;
@@ -209,14 +210,25 @@ p {
     }
 
     createHTMLTable(data, settings) {
-        let table = '<table>';
+        let table = '<table border="1" cellspacing="0" cellpadding="5" style="mso-table-layout:fixed;">';
+        
+        // Add column width styles based on content
+        table += '<colgroup>';
+        const maxCols = Math.max(...data.map(row => row.length));
+        for (let i = 0; i < maxCols; i++) {
+            const colWidth = Math.min(Math.max(100 / maxCols, 10), 30);
+            table += `<col style="width:${colWidth}%;"/>`;
+        }
+        table += '</colgroup>';
         
         data.forEach((row, rowIndex) => {
             const tag = rowIndex === 0 ? 'th' : 'td';
             table += '<tr>';
             row.forEach(cell => {
                 const cellText = this.escapeHTML(String(cell || ''));
-                table += `<${tag}>${cellText}</${tag}>`;
+                const isHebrew = this.isHebrewText(cellText);
+                const dirAttr = isHebrew ? ' dir="rtl"' : '';
+                table += `<${tag}${dirAttr}>${cellText}</${tag}>`;
             });
             table += '</tr>';
         });
@@ -231,7 +243,9 @@ p {
         data.forEach(row => {
             const text = Array.isArray(row) ? row.join(' | ') : String(row);
             const escapedText = this.escapeHTML(text);
-            paragraphs += `<p>${escapedText}</p>`;
+            const isHebrew = this.isHebrewText(escapedText);
+            const dirAttr = isHebrew ? ' dir="rtl"' : '';
+            paragraphs += `<p${dirAttr}>${escapedText}</p>`;
         });
         
         return paragraphs;
@@ -246,110 +260,27 @@ p {
             .replace(/'/g, '&#x27;');
     }
 
-    // יצירת מסמך RTF פשוט עם תמיכה בעברית
-    createRTFDocument(data, options = {}) {
-        const settings = {
-            rtl: options.rtl !== false,
-            fontSize: (options.fontSize || 12) * 2, // RTF uses half-points
-            fontFamily: options.fontFamily || 'David',
-            asTable: options.asTable !== false,
-            title: options.title || 'מסמך מומר מ-PDF'
-        };
-
-        // התחלת מסמך RTF עם קידוד Unicode מלא
-        let rtf = '{\\rtf1\\ansi\\ansicpg1255\\deff0\\deflang1037';
-        rtf += '{\\fonttbl{\\f0\\froman\\fcharset177\\fprq2 David;}{\\f1\\froman\\fcharset0\\fprq2 Arial;}}';
-        rtf += '{\\colortbl;\\red0\\green0\\blue0;}';
-        rtf += '\\viewkind4\\uc1\\pard';
-        
-        if (settings.rtl) {
-            rtf += '\\rtlpar\\qr '; // RTL paragraph alignment
-        }
-        
-        rtf += '\\f0\\fs' + settings.fontSize + '\\cf1 ';
-
-        // כותרת
-        if (settings.title) {
-            rtf += '\\b ' + this.convertToRTFHebrew(settings.title) + '\\b0\\par\\par ';
-        }
-
-        // תוכן
-        if (settings.asTable && data.length > 0) {
-            rtf += this.createRTFTableHebrew(data, settings);
-        } else {
-            rtf += this.createRTFParagraphsHebrew(data, settings);
-        }
-
-        rtf += '}';
-        return rtf;
+    // Check if text contains Hebrew characters
+    isHebrewText(text) {
+        return /[\u0590-\u05FF]/.test(text);
     }
-
-    // המרת טקסט עברי ל-RTF עם Unicode
-    convertToRTFHebrew(text) {
+    
+    // Clean Hebrew text and handle RTL issues
+    cleanHebrewText(text) {
         if (!text) return '';
         
-        let result = '';
-        for (let i = 0; i < text.length; i++) {
-            const char = text[i];
-            const charCode = char.charCodeAt(0);
-            
-            // תווים עבריים (1488-1514) ותווים מיוחדים
-            if (charCode >= 1488 && charCode <= 1514) {
-                result += '\\u' + charCode + '?';
-            } else if (charCode > 127) {
-                result += '\\u' + charCode + '?';
-            } else if (char === '\\') {
-                result += '\\\\';
-            } else if (char === '{') {
-                result += '\\{';
-            } else if (char === '}') {
-                result += '\\}';
-            } else {
-                result += char;
-            }
+        // Remove any control characters that might interfere with proper display
+        text = text.replace(/[\u0000-\u001F\u007F-\u009F]/g, '');
+        
+        // Handle special RTL markers if needed
+        text = text.replace(/[\u200E\u200F\u202A-\u202E]/g, '');
+        
+        // Add RTL mark at the beginning of Hebrew text if needed
+        if (this.isHebrewText(text) && !text.startsWith('\u200F')) {
+            text = '\u200F' + text;
         }
-        return result;
-    }
-
-    createRTFTableHebrew(data, settings) {
-        let table = '';
         
-        data.forEach((row, rowIndex) => {
-            table += '\\trowd\\trgaph120\\trleft0\\trqr '; // RTL table
-            
-            // הגדרת עמודות
-            const cellWidth = Math.floor(9000 / row.length);
-            for (let i = 0; i < row.length; i++) {
-                table += '\\cellx' + ((i + 1) * cellWidth) + ' ';
-            }
-            
-            // תוכן השורה
-            row.forEach(cell => {
-                const cellText = this.convertToRTFHebrew(String(cell || ''));
-                table += '\\intbl\\rtlch\\ltrch ' + cellText + '\\cell ';
-            });
-            
-            table += '\\row ';
-        });
-        
-        return table;
-    }
-
-    createRTFParagraphsHebrew(data, settings) {
-        let paragraphs = '';
-        
-        data.forEach(row => {
-            const text = Array.isArray(row) ? row.join(' | ') : String(row);
-            const convertedText = this.convertToRTFHebrew(text);
-            
-            if (settings.rtl) {
-                paragraphs += '\\rtlpar\\qr ' + convertedText + '\\par\\par ';
-            } else {
-                paragraphs += convertedText + '\\par\\par ';
-            }
-        });
-        
-        return paragraphs;
+        return text.trim();
     }
 
     // בדיקה שהספרייה זמינה ופועלת
@@ -369,6 +300,7 @@ p {
     }
 
     createDocument(data, options = {}) {
+        const docx = window.docx;
         const settings = {
             rtl: options.rtl !== false,           // RTL כברירת מחדל
             fontSize: options.fontSize || 12,     // גודל גופן
@@ -384,14 +316,14 @@ p {
 
         // הוספת כותרת אם נדרש
         if (settings.title) {
-            children.push(this.createTitle(settings.title, settings));
+            children.push(this.createTitle(settings.title, settings, docx));
         }
 
         // יצירת התוכן העיקרי
         if (settings.asTable && data.length > 0) {
-            children.push(this.createTable(data, settings));
+            children.push(this.createTable(data, settings, docx));
         } else {
-            children.push(...this.createParagraphs(data, settings));
+            children.push(...this.createParagraphs(data, settings, docx));
         }
 
         // יצירת המסמך
@@ -409,7 +341,7 @@ p {
             }],
             creator: "PDF to Excel/CSV Converter",
             title: settings.title,
-            description: "מסמך שהומר מקובץ PDF",
+            description: "מסמך שהומר מ-PDF",
             lastModifiedBy: "PDF Converter",
         });
 
@@ -420,7 +352,7 @@ p {
         return new docx.Paragraph({
             children: [
                 new docx.TextRun({
-                    text: titleText,
+                    text: this.cleanHebrewText(titleText),
                     bold: true,
                     size: (settings.fontSize + 4) * 2, // Word uses half-points
                     font: settings.fontFamily,
@@ -437,12 +369,17 @@ p {
             return this.createParagraph('אין נתונים להצגה', settings, docx);
         }
 
+        // Calculate proper column widths
+        const columnWidths = this.calculateColumnWidths(data);
+        
         // יצירת שורות הטבלה
         const tableRows = data.map((row, rowIndex) => {
             return new docx.TableRow({
                 children: row.map((cell, cellIndex) => {
                     return this.createTableCell(cell, rowIndex === 0, settings, docx);
-                })
+                }),
+                tableHeader: rowIndex === 0, // Mark first row as header
+                cantSplit: true  // Prevent row from splitting across pages
             });
         });
 
@@ -454,8 +391,10 @@ p {
                 type: docx.WidthType.PERCENTAGE,
             },
             borders: this.createTableBorders(docx),
-            layout: docx.TableLayoutType.AUTOFIT,
-            columnWidths: this.calculateColumnWidths(data),
+            layout: docx.TableLayoutType.FIXED,  // FIXED layout to maintain column structure
+            columnWidths: columnWidths,
+            alignment: settings.rtl ? docx.AlignmentType.RIGHT : docx.AlignmentType.LEFT,
+            tableHeader: true,  // Enable header row
         });
     }
 
@@ -463,6 +402,7 @@ p {
         const text = this.cleanHebrewText(String(cellText || ''));
         const isHebrew = this.isHebrewText(text);
         
+        // Enhanced cell formatting
         return new docx.TableCell({
             children: [
                 new docx.Paragraph({
@@ -472,14 +412,17 @@ p {
                             bold: isHeader,
                             size: settings.fontSize * 2,
                             font: settings.fontFamily,
+                            color: isHeader ? "000000" : "333333",
                         })
                     ],
                     alignment: isHebrew || settings.rtl ? 
                         docx.AlignmentType.RIGHT : 
                         docx.AlignmentType.LEFT,
                     bidirectional: isHebrew || settings.rtl,
+                    spacing: { before: 80, after: 80 }, // Add spacing for readability
                 })
             ],
+            width: { size: 100, type: docx.WidthType.PERCENTAGE }, // Equal width for each cell
             shading: isHeader ? {
                 fill: "E7E6E6",
                 type: docx.ShadingType.SOLID,
@@ -487,9 +430,10 @@ p {
             margins: {
                 top: 100,
                 bottom: 100,
-                left: 100,
-                right: 100,
+                left: 120,
+                right: 120,
             },
+            verticalAlign: docx.VerticalAlign.CENTER, // Center content vertically
         });
     }
 
@@ -516,25 +460,28 @@ p {
         const maxCols = Math.max(...data.map(row => row.length));
         const widths = [];
 
+        // First, find the maximum length for each column
         for (let col = 0; col < maxCols; col++) {
             let maxLength = 0;
             
-            for (let row = 0; row < Math.min(data.length, 10); row++) { // בדיקת 10 שורות ראשונות
-                if (data[row][col]) {
+            // Check all rows for better accuracy (not just first 10)
+            for (let row = 0; row < data.length; row++) {
+                if (data[row] && data[row][col]) {
                     const cellLength = String(data[row][col]).length;
                     maxLength = Math.max(maxLength, cellLength);
                 }
             }
             
-            // חישוב רוחב יחסי (מינימום 1000, מקסימום 4000)
-            const width = Math.min(Math.max(maxLength * 150, 1000), 4000);
+            // Calculate width based on content length
+            // Use at least 1000 and at most 4000 units (Word's internal measurement)
+            const width = Math.min(Math.max(maxLength * 200, 1000), 4000);
             widths.push(width);
         }
 
         return widths;
     }
 
-    createParagraphs(data, settings) {
+    createParagraphs(data, settings, docx) {
         const paragraphs = [];
 
         data.forEach((row, rowIndex) => {
@@ -542,26 +489,26 @@ p {
                 // שורה עם מספר תאים
                 const rowText = row.filter(cell => cell && String(cell).trim()).join(' | ');
                 if (rowText) {
-                    paragraphs.push(this.createParagraph(rowText, settings));
+                    paragraphs.push(this.createParagraph(rowText, settings, docx));
                 }
             } else {
                 // תא בודד
                 const text = String(row).trim();
                 if (text) {
-                    paragraphs.push(this.createParagraph(text, settings));
+                    paragraphs.push(this.createParagraph(text, settings, docx));
                 }
             }
 
             // רווח בין שורות
             if (rowIndex < data.length - 1) {
-                paragraphs.push(this.createEmptyParagraph());
+                paragraphs.push(this.createEmptyParagraph(docx));
             }
         });
 
         return paragraphs;
     }
 
-    createParagraph(text, settings) {
+    createParagraph(text, settings, docx) {
         const cleanText = this.cleanHebrewText(text);
         const isHebrew = this.isHebrewText(cleanText);
         
@@ -581,7 +528,7 @@ p {
         });
     }
 
-    createEmptyParagraph() {
+    createEmptyParagraph(docx) {
         return new docx.Paragraph({
             children: [new docx.TextRun({ text: "" })],
             spacing: { after: 100 },
@@ -592,6 +539,10 @@ p {
         try {
             const docx = window.docx; // התייחסות לספרייה הגלובלית
             
+            if (!docx || !docx.Packer) {
+                throw new Error('DOCX library not properly loaded');
+            }
+            
             // יצירת הקובץ
             const buffer = await docx.Packer.toBuffer(document);
             
@@ -600,10 +551,16 @@ p {
                 type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
             });
             
+            // Ensure filename has .docx extension
+            if (!fileName.toLowerCase().endsWith('.docx')) {
+                fileName += '.docx';
+            }
+            
             this.downloadBlob(blob, fileName);
             
         } catch (error) {
             this.log(`Download failed: ${error.message}`, 'error');
+            console.error("DOCX download error details:", error);
             throw new Error('כשל בהורדת קובץ Word');
         }
     }
@@ -642,107 +599,6 @@ p {
         };
 
         return this.export(data, styledOptions);
-    }
-
-    // יצירת מסמך עם עיצוב מתקדם
-    createFormattedTable(data, options = {}) {
-        const tableOptions = {
-            asTable: true,
-            rtl: true,
-            borders: true,
-            headerStyle: {
-                bold: true,
-                backgroundColor: 'E7E6E6',
-                fontSize: 14
-            },
-            cellPadding: {
-                top: 100,
-                bottom: 100,
-                left: 100,
-                right: 100
-            },
-            ...options
-        };
-
-        return this.export(data, tableOptions);
-    }
-
-    // יצירת מסמך עם כותרות מותאמות
-    createDocumentWithHeaders(data, headers, options = {}) {
-        // הוספת כותרות לנתונים
-        const dataWithHeaders = [headers, ...data];
-        
-        const headerOptions = {
-            hasHeaders: true,
-            title: options.title || 'דוח נתונים',
-            ...options
-        };
-
-        return this.export(dataWithHeaders, headerOptions);
-    }
-
-    // יצירת מסמך עם מידע נוסף
-    createDetailedDocument(data, options = {}) {
-        const detailedOptions = {
-            title: options.title || 'דוח מפורט',
-            subtitle: options.subtitle,
-            author: options.author || 'PDF Converter',
-            date: new Date().toLocaleDateString('he-IL'),
-            includeMetadata: true,
-            includeSummary: true,
-            ...options
-        };
-
-        return this.export(data, detailedOptions);
-    }
-
-    // בדיקת תמיכה בגופנים עבריים
-    validateHebrewFontSupport() {
-        const hebrewFonts = ['David', 'Arial Hebrew', 'Times New Roman', 'Calibri'];
-        
-        // בדיקה בסיסית של תמיכה בגופן (לא מושלמת בדפדפן)
-        return hebrewFonts.map(font => ({
-            name: font,
-            supported: true // נניח שכל הגופנים נתמכים
-        }));
-    }
-
-    // יצירת סגנונות מותאמים אישית
-    createCustomStyles(options = {}) {
-        return {
-            heading1: {
-                size: (options.titleFontSize || 16) * 2,
-                bold: true,
-                font: options.fontFamily || 'David'
-            },
-            heading2: {
-                size: (options.subtitleFontSize || 14) * 2,
-                bold: true,
-                font: options.fontFamily || 'David'
-            },
-            normal: {
-                size: (options.fontSize || 12) * 2,
-                font: options.fontFamily || 'David'
-            },
-            tableHeader: {
-                size: (options.fontSize || 12) * 2,
-                bold: true,
-                font: options.fontFamily || 'David'
-            }
-        };
-    }
-
-    // יצירת תצוגה מקדימה של DOCX
-    createPreview(data, maxRows = 10) {
-        const previewData = data.slice(0, maxRows);
-        
-        return {
-            data: previewData,
-            truncated: data.length > maxRows,
-            totalRows: data.length,
-            previewRows: previewData.length,
-            estimatedSize: this.estimateDocumentSize(previewData)
-        };
     }
 
     // אומדן גודל המסמך

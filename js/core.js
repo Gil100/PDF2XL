@@ -13,6 +13,9 @@ class PDFConverterCore {
         this.initializeExporters();
         this.initializeEventListeners();
         this.initializeTesseract();
+        
+        // Hide error section on initial load
+        this.hideError();
     }
 
     // אתחול מודולי הייצוא
@@ -438,7 +441,7 @@ class PDFConverterCore {
             
             // הודעה מיוחדת עבור DOCX
             if (format === 'docx') {
-                this.showInfo('מתחיל יצוא לפורמט Word. במקרה של בעיה, הקובץ יורד כ-DOC תואם Word');
+                this.showInfo('מתחיל יצוא לפורמט Word. יצירת הקובץ תלויה בזמינות הספרייה.');
             }
             
             const result = await this.exportWithFormat(fileData.data, format, {
@@ -448,9 +451,12 @@ class PDFConverterCore {
             // הודעה על הצלחה עם פרטים
             if (result.note) {
                 this.showInfo(result.note);
+            } else {
+                this.showInfo(`הקובץ ${result.fileName} נוצר בהצלחה`);
             }
             
         } catch (error) {
+            console.error("Download error:", error);
             this.showError(`שגיאה בהורדה: ${error.message}`);
         }
     }
