@@ -26,7 +26,12 @@ class CSVExporter extends BaseExporter {
             const csvContent = this.createCSVContent(normalizedData, options);
             
             // הורדת הקובץ
-            const fileName = options.fileName || this.generateFileName('converted_data', 'csv');
+            let fileName = options.fileName || this.generateFileName('converted_data', 'csv');
+            
+            // וידוא שיש סיומת .csv
+            if (!fileName.toLowerCase().endsWith('.csv')) {
+                fileName += '.csv';
+            }
             
             this.downloadCSV(csvContent, fileName, options);
             

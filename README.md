@@ -6,33 +6,28 @@ A modern, client-side web application that converts PDF files to Excel (.xlsx), 
 
 A modern, client-side web application that converts PDF files to Excel (.xlsx), CSV, or Word (.docx) formats with full Hebrew language support and OCR capabilities.
 
-## 🆕 Latest Updates (v2.2.2 - May 2025)
+## 🆕 Latest Updates (v2.2.3 - May 2025)
 
-### ✅ Critical Bug Fixes & Export Reliability (v2.2.2):
-- **🔧 Fixed DOCX Loading**: Resolved "Failed to load DOCX from CDN" errors with enhanced UMD loading
-- **📁 File Extension Security**: Ensured all exported files have correct extensions (.xlsx, .csv, .docx)
-- **⚡ Enhanced CDN Loading**: New smart loading system with 15-second timeout and better error handling
-- **🛡️ Protected Initialization**: Added proper dependency validation and fallback mechanisms
-- **🔍 Console Clarity**: Improved logging system for better troubleshooting
-- **🎯 Format-Specific Options**: Dynamic UI updates based on selected export format
+### ✅ Critical DOCX Export Fix & Browser Compatibility (v2.2.3):
+- **🔧 Fixed "nodebuffer not supported"**: Resolved browser compatibility issues with DOCX Packer
+- **📱 Browser-First Approach**: Uses `Packer.toBlob()` instead of `Packer.toBuffer()` for browser compatibility
+- **🔄 Smart Fallback Chain**: Blob → Buffer → Enhanced RTF for maximum compatibility
+- **📄 Improved RTF Export**: Enhanced RTF format with proper Hebrew charset and Word compatibility
+- **✅ Real Word Documents**: Generated files now open correctly in Microsoft Word without errors
+- **🔍 Enhanced Testing**: Updated test-docx.html with comprehensive blob/buffer testing
 
-### ✅ Excel Export Improvements:
-- **📊 Guaranteed .xlsx Extension**: Fixed cases where Excel files lacked proper extension
-- **🔄 Enhanced Fallback**: Dual download mechanism (direct + blob) for maximum compatibility
-- **📈 Better Column Widths**: Automatic column width calculation for optimal display
-- **🔤 Hebrew RTL Support**: Improved right-to-left text handling in Excel cells
+### 🎯 DOCX Export Improvements:
+- **🌐 Browser Compatibility**: Fixed "nodebuffer is not supported by this platform" error
+- **📊 Better RTF Tables**: Enhanced table formatting with proper borders and Hebrew support
+- **🔤 Unicode Handling**: Improved Hebrew text encoding in RTF format
+- **📁 File Extension Security**: Ensures .rtf extension for fallback files (more reliable than fake .docx)
+- **⚡ Faster Generation**: Optimized document creation process
 
-### ✅ User Experience Enhancements:
-- **📱 Info Notifications**: Temporary success/info messages for better user feedback
-- **🎨 Dynamic Options**: Format-specific options show/hide based on selection
-- **🔧 Better Error Messages**: More informative error messages in Hebrew
-- **⚡ Faster Loading**: Optimized script loading order and initialization
-
-### 🐛 Bug Fixes:
-- Fixed favicon 404 error by adding proper favicon.ico
-- Resolved JavaScript syntax errors in module loading
-- Fixed file extension validation issues
-- Improved error handling for CDN failures
+### 🐛 Major Bug Fixes:
+- **❌ DOCX Generation Errors**: Fixed "Word found unreadable content" errors
+- **🔤 Hebrew Text Corruption**: Fixed gibberish text in exported documents
+- **📁 File Extension Issues**: Guaranteed correct extensions for all export formats
+- **🔧 Console Error Cleanup**: Eliminated nodebuffer-related console errors
 
 ### ✅ Major DOCX Export Fixes (v2.2.0):
 - **🔧 DOCX Library Upgrade**: Updated to modern docx@8.5.0 with multiple CDN sources and auto-fallback

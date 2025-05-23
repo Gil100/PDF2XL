@@ -62,8 +62,9 @@
                             new window.docx.Paragraph({
                                 children: [
                                     new window.docx.TextRun({
-                                        text: "טקסט בעברית לבדיקה",
-                                        font: "David"
+                                        text: "טקסט בעברית לבדיקה - עברית וEnglish מעורב",
+                                        font: "David",
+                                        size: 24
                                     })
                                 ]
                             })
@@ -71,17 +72,47 @@
                     }]
                 });
                 
-                status.innerHTML = '✅ ספריית DOCX עובדת תקין!';
+                status.innerHTML = '✅ ספריית DOCX עובדת תקין!<br>';
                 
-                // Try to create buffer
-                window.docx.Packer.toBuffer(doc).then(buffer => {
-                    status.innerHTML += '<br>✅ יצירת קובץ הצליחה!';
-                }).catch(err => {
-                    status.innerHTML += '<br>❌ שגיאה ביצירת קובץ: ' + err.message;
+                // Test toBlob first (preferred method)
+                window.docx.Packer.toBlob(doc).then(blob => {
+                    status.innerHTML += '✅ יצירת Blob הצליחה! (מתודה מועדפת)<br>';
+                    
+                    // Test download
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = 'test-docx-blob.docx';
+                    link.textContent = 'הורד קובץ בדיקה (Blob)';
+                    status.appendChild(document.createElement('br'));
+                    status.appendChild(link);
+                    
+                }).catch(blobErr => {
+                    status.innerHTML += '⚠️ toBlob נכשל: ' + blobErr.message + '<br>';
+                    
+                    // Fallback to toBuffer
+                    window.docx.Packer.toBuffer(doc).then(buffer => {
+                        status.innerHTML += '✅ יצירת Buffer הצליחה! (fallback)<br>';
+                        
+                        // Convert buffer to blob and test download
+                        const blob = new Blob([buffer], {
+                            type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+                        });
+                        
+                        const link = document.createElement('a');
+                        link.href = URL.createObjectURL(blob);
+                        link.download = 'test-docx-buffer.docx';
+                        link.textContent = 'הורד קובץ בדיקה (Buffer→Blob)';
+                        status.appendChild(document.createElement('br'));
+                        status.appendChild(link);
+                        
+                    }).catch(bufferErr => {
+                        status.innerHTML += '❌ גם toBuffer נכשל: ' + bufferErr.message + '<br>';
+                        status.innerHTML += '⚠️ יש להשתמש ב-RTF fallback במקרה זה';
+                    });
                 });
                 
             } catch (error) {
-                status.innerHTML = '❌ שגיאה: ' + error.message;
+                status.innerHTML = '❌ שגיאה כללית: ' + error.message;
             }
         }
     </script>

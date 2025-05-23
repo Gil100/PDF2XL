@@ -112,23 +112,26 @@ class DOCXExporter extends BaseExporter {
         
         const normalizedData = this.normalizeData(data);
         
-        // יצירת קובץ RTF עם Word compatibility headers (עובד טוב יותר מ-HTML)
+        // יצירת קובץ RTF משופר עם Word compatibility headers
         const rtfContent = this.createWordCompatibleRTF(normalizedData, options);
         
-        // הורדת הקובץ עם MIME type של Word
+        // שימוש ב-MIME type של RTF במקום DOCX (יותר יציב)
         const blob = new Blob([rtfContent], {
-            type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+            type: 'application/rtf'
         });
         
-        this.downloadBlob(blob, fileName);
+        // שינוי סיומת קובץ ל-.rtf לתאימות טובה יותר
+        const rtfFileName = fileName.replace('.docx', '.rtf');
         
-        this.log(`RTF-to-Word fallback export completed: ${fileName}`);
+        this.downloadBlob(blob, rtfFileName);
+        
+        this.log(`RTF fallback export completed: ${rtfFileName}`);
         
         return {
             success: true,
-            fileName: fileName,
-            format: 'docx',
-            note: 'הקובץ נוצר כקובץ Word תואם (מבוסס RTF). אם יש קושי בפתיחה, השתמש ב-Microsoft Word או LibreOffice.'
+            fileName: rtfFileName,
+            format: 'rtf',
+            note: 'הקובץ נוצר כקובץ RTF תואם Word. הקובץ ייפתח ב-Microsoft Word ללא בעיות. אם תרצה שמירה כ-DOCX, פתח ב-Word ושמור מחדש.'
         };
     }
 
@@ -142,25 +145,37 @@ class DOCXExporter extends BaseExporter {
             title: options.title || 'מסמך מומר מ-PDF'
         };
 
-        // RTF header עם תמיכה בעברית ו-Unicode
-        let rtf = '{\\rtf1\\ansi\\deff0 {\\fonttbl {\\f0 ' + settings.fontFamily + ';}{\\f1 Arial;}}';
-        rtf += '{\\colortbl;\\red0\\green0\\blue0;\\red128\\green128\\blue128;}';
+        // RTF header עם תמיכה בעברית ו-Unicode מתקדמת
+        let rtf = '{\\rtf1\\ansi\\ansicpg1255\\deff0\\deflang1037';
         
-        // הגדרות דף ו-RTL
+        // טבלת גופנים עם תמיכה בעברית
+        rtf += '{\\fonttbl';
+        rtf += '{\\f0\\fnil\\fcharset177 ' + settings.fontFamily + ';}';
+        rtf += '{\\f1\\fnil\\fcharset0 Arial;}';
+        rtf += '{\\f2\\fnil\\fcharset177 Times New Roman;}';
+        rtf += '}';
+        
+        // טבלת צבעים
+        rtf += '{\\colortbl;\\red0\\green0\\blue0;\\red128\\green128\\blue128;\\red255\\green0\\blue0;}';
+        
+        // הגדרות מסמך
+        rtf += '\\paperw11906\\paperh16838\\margl1134\\margr1134\\margt1134\\margb1134';
+        
+        // הגדרות RTL בסיסיות
         if (settings.rtl) {
-            rtf += '\\rtlpar\\qr ';
+            rtf += '\\rtldoc\\rtlpar';
         }
         
-        rtf += '\\fs' + (settings.fontSize * 2) + ' '; // RTF uses half-points
+        rtf += '\\fs' + (settings.fontSize * 2) + '\\f0 '; // RTF uses half-points
         
-        // כותרת
+        // כותרת מסמך
         if (settings.title) {
             const cleanTitle = this.cleanHebrewText(settings.title);
-            rtf += '\\b\\fs' + ((settings.fontSize + 4) * 2) + ' ';
+            rtf += '\\pard\\qc\\b\\fs' + ((settings.fontSize + 6) * 2) + ' ';
             rtf += this.escapeRTF(cleanTitle) + '\\b0\\par\\par ';
         }
         
-        // תוכן
+        // תוכן עיקרי
         if (settings.asTable && data.length > 0) {
             rtf += this.createRTFTable(data, settings);
         } else {
@@ -174,29 +189,59 @@ class DOCXExporter extends BaseExporter {
     createRTFTable(data, settings) {
         let table = '';
         
+        // הגדרות כלליות לטבלה
+        const maxCols = Math.max(...data.map(row => row.length));
+        const colWidth = Math.floor(8500 / maxCols); // רוחב עמודות יחסי
+        
         data.forEach((row, rowIndex) => {
-            // הגדרת עמודות טבלה
-            let colDefs = '';
-            const colWidth = Math.floor(9000 / row.length); // רוחב עמודות יחסי
+            // התחלת שורה עם הגדרות
+            table += '\\trowd\\trgaph115\\trleft0';
             
+            // הגדרת גבולות טבלה
+            table += '\\trbrdrl\\brdrs\\brdrw10\\brdrcf1';
+            table += '\\trbrdrt\\brdrs\\brdrw10\\brdrcf1';
+            table += '\\trbrdrr\\brdrs\\brdrw10\\brdrcf1';
+            table += '\\trbrdrb\\brdrs\\brdrw10\\brdrcf1';
+            
+            // הגדרת עמודות
             for (let i = 0; i < row.length; i++) {
-                colDefs += '\\cellx' + ((i + 1) * colWidth) + ' ';
+                const cellPos = (i + 1) * colWidth;
+                table += '\\clbrdrl\\brdrs\\brdrw10\\brdrcf1';
+                table += '\\clbrdrt\\brdrs\\brdrw10\\brdrcf1';
+                table += '\\clbrdrr\\brdrs\\brdrw10\\brdrcf1';
+                table += '\\clbrdrb\\brdrs\\brdrw10\\brdrcf1';
+                table += '\\cellx' + cellPos;
             }
             
-            table += '\\trowd ' + colDefs;
-            
             // תוכן השורה
-            row.forEach(cell => {
+            row.forEach((cell, cellIndex) => {
                 const cellText = this.cleanHebrewText(String(cell || ''));
                 const isHebrew = this.isHebrewText(cellText);
                 
+                // הגדרות תא
+                table += '\\pard\\intbl';
+                
                 if (isHebrew || settings.rtl) {
-                    table += '\\rtlch\\intbl ' + this.escapeRTF(cellText) + '\\cell ';
+                    table += '\\rtlch\\qr ';
                 } else {
-                    table += '\\intbl ' + this.escapeRTF(cellText) + '\\cell ';
+                    table += '\\ltrch\\ql ';
                 }
+                
+                // עיצוב כותרת (שורה ראשונה)
+                if (rowIndex === 0) {
+                    table += '\\b ';
+                }
+                
+                table += this.escapeRTF(cellText);
+                
+                if (rowIndex === 0) {
+                    table += '\\b0 ';
+                }
+                
+                table += '\\cell ';
             });
             
+            // סיום שורה
             table += '\\row ';
         });
         
@@ -224,14 +269,32 @@ class DOCXExporter extends BaseExporter {
     escapeRTF(text) {
         if (!text) return '';
         
-        return text
+        // המרה לstring אם צריך
+        text = String(text);
+        
+        // escape של תווים בסיסיים
+        text = text
             .replace(/\\/g, '\\\\')    // Escape backslashes
             .replace(/\{/g, '\\{')     // Escape braces
-            .replace(/\}/g, '\\}')     // Escape braces
-            .replace(/[\u0080-\uFFFF]/g, (match) => {
-                // Convert Unicode to RTF Unicode syntax
-                return '\\u' + match.charCodeAt(0) + '?';
-            });
+            .replace(/\}/g, '\\}');    // Escape braces
+        
+        // טיפול בתווי Unicode (כולל עברית)
+        let result = '';
+        for (let i = 0; i < text.length; i++) {
+            const char = text[i];
+            const charCode = char.charCodeAt(0);
+            
+            // תווים ASCII רגילים
+            if (charCode < 128) {
+                result += char;
+            }
+            // תווים Unicode (כולל עברית)
+            else {
+                result += '\\u' + charCode + '?';
+            }
+        }
+        
+        return result;
     }
 
     // Check if text contains Hebrew characters
@@ -555,20 +618,37 @@ class DOCXExporter extends BaseExporter {
             
             this.log('Starting document generation with DOCX Packer', 'debug');
             
-            // יצירת הקובץ עם timeout למניעת hang
-            const buffer = await Promise.race([
-                docx.Packer.toBuffer(document),
-                new Promise((_, reject) => 
-                    setTimeout(() => reject(new Error('Document generation timeout')), 30000)
-                )
-            ]);
-            
-            this.log('Document buffer created successfully', 'debug');
-            
-            // יצירת Blob והורדה
-            const blob = new Blob([buffer], {
-                type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-            });
+            // שימוש ב-toBlob במקום toBuffer לתמיכה בדפדפנים
+            let blob;
+            try {
+                blob = await Promise.race([
+                    docx.Packer.toBlob(document),
+                    new Promise((_, reject) => 
+                        setTimeout(() => reject(new Error('Document generation timeout')), 30000)
+                    )
+                ]);
+                this.log('Document blob created successfully with Packer.toBlob', 'debug');
+            } catch (blobError) {
+                this.log(`Packer.toBlob failed: ${blobError.message}, trying alternative method`, 'warn');
+                
+                // fallback אלטרנטיבי - ניסיון עם toBuffer ואז המרה
+                try {
+                    const buffer = await Promise.race([
+                        docx.Packer.toBuffer(document),
+                        new Promise((_, reject) => 
+                            setTimeout(() => reject(new Error('Buffer generation timeout')), 30000)
+                        )
+                    ]);
+                    
+                    blob = new Blob([buffer], {
+                        type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+                    });
+                    this.log('Document created via buffer fallback', 'debug');
+                } catch (bufferError) {
+                    this.log(`Both blob and buffer methods failed: ${bufferError.message}`, 'error');
+                    throw new Error('Could not generate DOCX document with native library');
+                }
+            }
             
             // וידוא סיומת קובץ
             if (!fileName.toLowerCase().endsWith('.docx')) {
