@@ -6,15 +6,33 @@ A modern, client-side web application that converts PDF files to Excel (.xlsx), 
 
 A modern, client-side web application that converts PDF files to Excel (.xlsx), CSV, or Word (.docx) formats with full Hebrew language support and OCR capabilities.
 
-## 🆕 Latest Updates (v2.2.1 - May 2025)
+## 🆕 Latest Updates (v2.2.2 - May 2025)
 
-### ✅ Critical DOCX Export Fixes (v2.2.1):
-- **🔧 Syntax Error Fix**: Resolved JavaScript syntax errors in docx-exporter.js that prevented loading
-- **📡 Multi-Source CDN Loading**: Intelligent failover system using unpkg.com, cdnjs.com, and local fallback
-- **🛡️ Dependency Validation**: Enhanced initialization with proper class availability checking
-- **⚡ Protected Startup**: Added safeguards against initialization failures with delayed retry mechanism
-- **🔍 Enhanced Debugging**: Detailed console logging for troubleshooting DOCX loading issues
-- **🔄 Robust Fallback**: Automatic RTF export when native DOCX library fails
+### ✅ Critical Bug Fixes & Export Reliability (v2.2.2):
+- **🔧 Fixed DOCX Loading**: Resolved "Failed to load DOCX from CDN" errors with enhanced UMD loading
+- **📁 File Extension Security**: Ensured all exported files have correct extensions (.xlsx, .csv, .docx)
+- **⚡ Enhanced CDN Loading**: New smart loading system with 15-second timeout and better error handling
+- **🛡️ Protected Initialization**: Added proper dependency validation and fallback mechanisms
+- **🔍 Console Clarity**: Improved logging system for better troubleshooting
+- **🎯 Format-Specific Options**: Dynamic UI updates based on selected export format
+
+### ✅ Excel Export Improvements:
+- **📊 Guaranteed .xlsx Extension**: Fixed cases where Excel files lacked proper extension
+- **🔄 Enhanced Fallback**: Dual download mechanism (direct + blob) for maximum compatibility
+- **📈 Better Column Widths**: Automatic column width calculation for optimal display
+- **🔤 Hebrew RTL Support**: Improved right-to-left text handling in Excel cells
+
+### ✅ User Experience Enhancements:
+- **📱 Info Notifications**: Temporary success/info messages for better user feedback
+- **🎨 Dynamic Options**: Format-specific options show/hide based on selection
+- **🔧 Better Error Messages**: More informative error messages in Hebrew
+- **⚡ Faster Loading**: Optimized script loading order and initialization
+
+### 🐛 Bug Fixes:
+- Fixed favicon 404 error by adding proper favicon.ico
+- Resolved JavaScript syntax errors in module loading
+- Fixed file extension validation issues
+- Improved error handling for CDN failures
 
 ### ✅ Major DOCX Export Fixes (v2.2.0):
 - **🔧 DOCX Library Upgrade**: Updated to modern docx@8.5.0 with multiple CDN sources and auto-fallback

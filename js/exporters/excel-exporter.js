@@ -38,7 +38,12 @@ class ExcelExporter extends BaseExporter {
             const workbook = this.createWorkbook(worksheet, options);
             
             // הורדת הקובץ
-            const fileName = options.fileName || this.generateFileName('converted_data', 'xlsx');
+            let fileName = options.fileName || this.generateFileName('converted_data', 'xlsx');
+            
+            // וידוא שיש סיומת .xlsx
+            if (!fileName.toLowerCase().endsWith('.xlsx')) {
+                fileName += '.xlsx';
+            }
             
             this.downloadWorkbook(workbook, fileName);
             

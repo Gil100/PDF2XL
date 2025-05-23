@@ -10,28 +10,34 @@ class DOCXExporter extends BaseExporter {
     async initialize() {
         this.log('Initializing DOCX exporter...');
         
-        // בדיקה אם הספרייה זמינה מ-CDN או fallback
-        if (typeof window.docx !== 'undefined') {
+        // בדיקה אם הספרייה זמינה מ-CDN
+        if (typeof window.docx !== 'undefined' && window.docx.Document) {
             this.docxLoaded = true;
             this.log('DOCX library loaded from CDN');
             return;
         } 
         
-        // חכה עד שהספרייה תיטען (עד 10 שניות)
+        // חכה עד שהספרייה תיטען (עד 15 שניות)
         let attempts = 0;
-        const maxAttempts = 50; // 10 שניות
+        const maxAttempts = 75; // 15 שניות
         
-        while (attempts < maxAttempts && typeof window.docx === 'undefined') {
+        while (attempts < maxAttempts && (typeof window.docx === 'undefined' || !window.docx.Document)) {
             await new Promise(resolve => setTimeout(resolve, 200));
             attempts++;
+            
+            // בדיקה מיוחדת אם יש סימן לכשל בטעינה
+            if (window.docxLoadFailed) {
+                this.log('DOCX loading failed flag detected', 'warn');
+                break;
+            }
         }
         
-        if (typeof window.docx !== 'undefined') {
+        if (typeof window.docx !== 'undefined' && window.docx.Document) {
             this.docxLoaded = true;
             this.log('DOCX library loaded after waiting');
             return;
         } else {
-            this.log('DOCX library not available after waiting. Using enhanced fallback.', 'warn');
+            this.log('DOCX library not available after waiting. Using enhanced RTF fallback.', 'warn');
             this.docxLoaded = false;
         }
     }
@@ -61,8 +67,13 @@ class DOCXExporter extends BaseExporter {
             const document = this.createDocument(normalizedData, options);
             
             // יצירת ההורדה
-            const fileName = options.fileName || this.generateFileName('converted_data', 'docx');
+            let fileName = options.fileName || this.generateFileName('converted_data', 'docx');
             
+            // וידוא שיש סיומת .docx
+            if (!fileName.toLowerCase().endsWith('.docx')) {
+                fileName += '.docx';
+            }
+
             await this.downloadDocument(document, fileName);
             
             this.log(`DOCX export completed successfully: ${fileName}`);
@@ -92,7 +103,13 @@ class DOCXExporter extends BaseExporter {
     async exportWithFallback(data, options = {}) {
         this.log('Using enhanced RTF-to-Word fallback export method', 'warn');
         
-        const fileName = options.fileName || this.generateFileName('converted_data', 'docx');
+        let fileName = options.fileName || this.generateFileName('converted_data', 'docx');
+        
+        // וידוא שהקובץ יקבל סיומת .docx
+        if (!fileName.toLowerCase().endsWith('.docx')) {
+            fileName += '.docx';
+        }
+        
         const normalizedData = this.normalizeData(data);
         
         // יצירת קובץ RTF עם Word compatibility headers (עובד טוב יותר מ-HTML)
@@ -103,19 +120,13 @@ class DOCXExporter extends BaseExporter {
             type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
         });
         
-        // וידוא שהקובץ יקבל סיומת .docx
-        let safeFileName = fileName;
-        if (!safeFileName.toLowerCase().endsWith('.docx')) {
-            safeFileName += '.docx';
-        }
+        this.downloadBlob(blob, fileName);
         
-        this.downloadBlob(blob, safeFileName);
-        
-        this.log(`RTF-to-Word fallback export completed: ${safeFileName}`);
+        this.log(`RTF-to-Word fallback export completed: ${fileName}`);
         
         return {
             success: true,
-            fileName: safeFileName,
+            fileName: fileName,
             format: 'docx',
             note: 'הקובץ נוצר כקובץ Word תואם (מבוסס RTF). אם יש קושי בפתיחה, השתמש ב-Microsoft Word או LibreOffice.'
         };

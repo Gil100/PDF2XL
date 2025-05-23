@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PDF to Excel/CSV Converter - תמיכה עברית</title>
     
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="favicon.ico">
+    
     <!-- PWA Manifest -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0d6efd">
@@ -284,35 +287,64 @@
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4.1.1/dist/tesseract.min.js"></script>
     <!-- SheetJS for Excel generation -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <!-- DOCX library for Word documents - Multiple CDN sources with fallback -->
+    <!-- DOCX library for Word documents - Enhanced loading with proper CDN -->
     <script>
-        // Try loading DOCX from multiple sources
+        // Enhanced DOCX library loading with better error handling
         (function() {
+            console.log('[PDFConverter] Initializing DOCX library loading...');
+            
             const docxSources = [
-                'https://unpkg.com/docx@8.5.0/build/index.js',
-                'https://cdnjs.cloudflare.com/ajax/libs/docx/8.5.0/docx.min.js',
-                'js/libs/docx.js'  // Local fallback
+                // Primary CDN - unpkg with UMD build
+                'https://unpkg.com/docx@8.5.0/build/index.umd.js',
+                // Secondary CDN - jsDelivr
+                'https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js',
+                // Fallback CDN - with different version
+                'https://unpkg.com/docx@7.8.0/build/index.umd.js',
+                // Local fallback
+                'js/libs/docx.js'
             ];
             
             let currentIndex = 0;
+            let loadTimeout;
             
             function loadNext() {
                 if (currentIndex >= docxSources.length) {
-                    console.warn('All DOCX sources failed, will use fallback export method');
+                    console.error('[PDFConverter] All DOCX sources failed. DOCX export will use RTF fallback.');
+                    window.docxLoadFailed = true;
                     return;
                 }
                 
                 const script = document.createElement('script');
                 script.src = docxSources[currentIndex];
+                script.async = false; // Ensure synchronous loading
+                
+                // Add timeout for each load attempt
+                loadTimeout = setTimeout(() => {
+                    console.warn(`[PDFConverter] Timeout loading DOCX from: ${docxSources[currentIndex]}`);
+                    script.onerror();
+                }, 10000);
                 
                 script.onload = function() {
-                    console.log('DOCX library loaded from:', docxSources[currentIndex]);
+                    clearTimeout(loadTimeout);
+                    console.log(`[PDFConverter] ✅ DOCX library loaded successfully from: ${docxSources[currentIndex]}`);
+                    
+                    // Verify the library loaded correctly
+                    setTimeout(() => {
+                        if (typeof window.docx !== 'undefined' && window.docx.Document) {
+                            console.log('[PDFConverter] ✅ DOCX library verified - Document class available');
+                            window.docxLoadSuccess = true;
+                        } else {
+                            console.warn('[PDFConverter] ⚠️ DOCX library loaded but Document class not found');
+                            window.docxLoadFailed = true;
+                        }
+                    }, 100);
                 };
                 
                 script.onerror = function() {
-                    console.warn('Failed to load DOCX from:', docxSources[currentIndex]);
+                    clearTimeout(loadTimeout);
+                    console.warn(`[PDFConverter] ❌ Failed to load DOCX from: ${docxSources[currentIndex]}`);
                     currentIndex++;
-                    loadNext();
+                    setTimeout(loadNext, 100); // Small delay before next attempt
                 };
                 
                 document.head.appendChild(script);

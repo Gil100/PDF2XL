@@ -55,10 +55,20 @@ class BaseExporter {
         // יש לממש במחלקות יורשות
     }
 
-    // יצירת שם קובץ ברירת מחדל
+    // יצירת שם קובץ ברירת מחדל עם וידוא סיומת
     generateFileName(baseName, extension) {
         const timestamp = new Date().toISOString().split('T')[0];
-        return `${baseName}_${timestamp}.${extension}`;
+        let fileName = `${baseName}_${timestamp}`;
+        
+        // וידוא שהסיומת מוסרת
+        if (extension && !fileName.toLowerCase().endsWith(`.${extension.toLowerCase()}`)) {
+            fileName += `.${extension}`;
+        }
+        
+        // ניקוי תווים לא תקינים בשם קובץ
+        fileName = fileName.replace(/[<>:"/\\|?*]/g, '_');
+        
+        return fileName;
     }
 
     // המרת נתונים לפורמט מתאים
