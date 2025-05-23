@@ -10,14 +10,28 @@ class DOCXExporter extends BaseExporter {
     async initialize() {
         this.log('Initializing DOCX exporter...');
         
-        // בדיקה אם הספרייה כבר טעונה
+        // בדיקה אם הספרייה זמינה מ-CDN או fallback
         if (typeof window.docx !== 'undefined') {
             this.docxLoaded = true;
-            this.log('DOCX library already loaded');
+            this.log('DOCX library loaded from CDN');
+            return;
+        } 
+        
+        // חכה עד שהספרייה תיטען (עד 10 שניות)
+        let attempts = 0;
+        const maxAttempts = 50; // 10 שניות
+        
+        while (attempts < maxAttempts && typeof window.docx === 'undefined') {
+            await new Promise(resolve => setTimeout(resolve, 200));
+            attempts++;
+        }
+        
+        if (typeof window.docx !== 'undefined') {
+            this.docxLoaded = true;
+            this.log('DOCX library loaded after waiting');
             return;
         } else {
-            this.log('DOCX library not loaded from HTML. Using fallback for all exports.');
-            // Instead of trying to load the library, we'll just use the fallback export method
+            this.log('DOCX library not available after waiting. Using enhanced fallback.', 'warn');
             this.docxLoaded = false;
         }
     }
@@ -26,18 +40,24 @@ class DOCXExporter extends BaseExporter {
         try {
             await this.ensureReady();
             
+            this.log('Starting DOCX export process', 'debug');
+            
             // בדיקה נוספת שהספרייה זמינה וישימה
             if (!this.isDocxAvailable()) {
-                this.log('Main DOCX library not available, trying fallback', 'warn');
+                this.log('Main DOCX library not available, using fallback', 'warn');
                 return await this.exportWithFallback(data, options);
             }
             
-            this.log('Starting DOCX export', 'debug');
+            this.log('Using native DOCX library for export', 'debug');
             
             // נירמול הנתונים
             const normalizedData = this.normalizeData(data);
+            if (!normalizedData || normalizedData.length === 0) {
+                throw new Error('אין נתונים לייצוא');
+            }
             
             // יצירת מסמך Word
+            this.log('Creating DOCX document', 'debug');
             const document = this.createDocument(normalizedData, options);
             
             // יצירת ההורדה
@@ -45,7 +65,7 @@ class DOCXExporter extends BaseExporter {
             
             await this.downloadDocument(document, fileName);
             
-            this.log(`DOCX export completed: ${fileName}`);
+            this.log(`DOCX export completed successfully: ${fileName}`);
             
             return {
                 success: true,
@@ -57,33 +77,33 @@ class DOCXExporter extends BaseExporter {
             this.log(`DOCX export failed: ${error.message}`, 'error');
             console.error("DOCX export error details:", error);
             
-            // ניסיון fallback
+            // ניסיון fallback אוטומטי
             try {
-                this.log('Trying fallback DOCX export', 'warn');
+                this.log('Attempting fallback DOCX export', 'warn');
                 return await this.exportWithFallback(data, options);
             } catch (fallbackError) {
                 this.log(`Fallback also failed: ${fallbackError.message}`, 'error');
-                throw new Error(this.createUserFriendlyError(error, 'ייצוא Word'));
+                throw new Error(`ייצוא Word נכשל: ${error.message}. גם ה-fallback נכשל: ${fallbackError.message}`);
             }
         }
     }
 
-    // ייצוא עם fallback משופר יותר (HTML עם Word compatibility)
+    // ייצוא עם fallback משופר יותר (RTF עם Word compatibility)
     async exportWithFallback(data, options = {}) {
-        this.log('Using enhanced HTML-to-Word fallback export method', 'warn');
+        this.log('Using enhanced RTF-to-Word fallback export method', 'warn');
         
         const fileName = options.fileName || this.generateFileName('converted_data', 'docx');
         const normalizedData = this.normalizeData(data);
         
-        // יצירת קובץ HTML עם Word compatibility headers
-        const htmlContent = this.createWordCompatibleHTML(normalizedData, options);
+        // יצירת קובץ RTF עם Word compatibility headers (עובד טוב יותר מ-HTML)
+        const rtfContent = this.createWordCompatibleRTF(normalizedData, options);
         
         // הורדת הקובץ עם MIME type של Word
-        const blob = new Blob([htmlContent], {
+        const blob = new Blob([rtfContent], {
             type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
         });
         
-        // Make sure the file has a .docx extension
+        // וידוא שהקובץ יקבל סיומת .docx
         let safeFileName = fileName;
         if (!safeFileName.toLowerCase().endsWith('.docx')) {
             safeFileName += '.docx';
@@ -91,18 +111,117 @@ class DOCXExporter extends BaseExporter {
         
         this.downloadBlob(blob, safeFileName);
         
-        this.log(`HTML-to-Word fallback export completed: ${safeFileName}`);
+        this.log(`RTF-to-Word fallback export completed: ${safeFileName}`);
         
         return {
             success: true,
             fileName: safeFileName,
             format: 'docx',
-            note: 'הקובץ נוצר כקובץ Word (מבוסס HTML). אם יש קושי בפתיחה, ניתן לפתוח עם Microsoft Word או LibreOffice.'
+            note: 'הקובץ נוצר כקובץ Word תואם (מבוסס RTF). אם יש קושי בפתיחה, השתמש ב-Microsoft Word או LibreOffice.'
         };
     }
 
-    // יצירת HTML תואם Word עם תמיכה מלאה בעברית
-    createWordCompatibleHTML(data, options = {}) {
+    // יצירת RTF תואם Word עם תמיכה מלאה בעברית
+    createWordCompatibleRTF(data, options = {}) {
+        const settings = {
+            rtl: options.rtl !== false,
+            fontSize: options.fontSize || 12,
+            fontFamily: options.fontFamily || 'David',
+            asTable: options.asTable !== false,
+            title: options.title || 'מסמך מומר מ-PDF'
+        };
+
+        // RTF header עם תמיכה בעברית ו-Unicode
+        let rtf = '{\\rtf1\\ansi\\deff0 {\\fonttbl {\\f0 ' + settings.fontFamily + ';}{\\f1 Arial;}}';
+        rtf += '{\\colortbl;\\red0\\green0\\blue0;\\red128\\green128\\blue128;}';
+        
+        // הגדרות דף ו-RTL
+        if (settings.rtl) {
+            rtf += '\\rtlpar\\qr ';
+        }
+        
+        rtf += '\\fs' + (settings.fontSize * 2) + ' '; // RTF uses half-points
+        
+        // כותרת
+        if (settings.title) {
+            const cleanTitle = this.cleanHebrewText(settings.title);
+            rtf += '\\b\\fs' + ((settings.fontSize + 4) * 2) + ' ';
+            rtf += this.escapeRTF(cleanTitle) + '\\b0\\par\\par ';
+        }
+        
+        // תוכן
+        if (settings.asTable && data.length > 0) {
+            rtf += this.createRTFTable(data, settings);
+        } else {
+            rtf += this.createRTFParagraphs(data, settings);
+        }
+        
+        rtf += '}';
+        return rtf;
+    }
+
+    createRTFTable(data, settings) {
+        let table = '';
+        
+        data.forEach((row, rowIndex) => {
+            // הגדרת עמודות טבלה
+            let colDefs = '';
+            const colWidth = Math.floor(9000 / row.length); // רוחב עמודות יחסי
+            
+            for (let i = 0; i < row.length; i++) {
+                colDefs += '\\cellx' + ((i + 1) * colWidth) + ' ';
+            }
+            
+            table += '\\trowd ' + colDefs;
+            
+            // תוכן השורה
+            row.forEach(cell => {
+                const cellText = this.cleanHebrewText(String(cell || ''));
+                const isHebrew = this.isHebrewText(cellText);
+                
+                if (isHebrew || settings.rtl) {
+                    table += '\\rtlch\\intbl ' + this.escapeRTF(cellText) + '\\cell ';
+                } else {
+                    table += '\\intbl ' + this.escapeRTF(cellText) + '\\cell ';
+                }
+            });
+            
+            table += '\\row ';
+        });
+        
+        return table;
+    }
+
+    createRTFParagraphs(data, settings) {
+        let paragraphs = '';
+        
+        data.forEach(row => {
+            const text = Array.isArray(row) ? row.join(' | ') : String(row);
+            const cleanText = this.cleanHebrewText(text);
+            const isHebrew = this.isHebrewText(cleanText);
+            
+            if (isHebrew || settings.rtl) {
+                paragraphs += '\\rtlpar\\qr ' + this.escapeRTF(cleanText) + '\\par ';
+            } else {
+                paragraphs += '\\ltrpar\\ql ' + this.escapeRTF(cleanText) + '\\par ';
+            }
+        });
+        
+        return paragraphs;
+    }
+
+    escapeRTF(text) {
+        if (!text) return '';
+        
+        return text
+            .replace(/\\/g, '\\\\')    // Escape backslashes
+            .replace(/\{/g, '\\{')     // Escape braces
+            .replace(/\}/g, '\\}')     // Escape braces
+            .replace(/[\u0080-\uFFFF]/g, (match) => {
+                // Convert Unicode to RTF Unicode syntax
+                return '\\u' + match.charCodeAt(0) + '?';
+            });
+    }
         const settings = {
             rtl: options.rtl !== false,
             fontSize: options.fontSize || 12,
@@ -265,19 +384,36 @@ p {
         return /[\u0590-\u05FF]/.test(text);
     }
     
-    // Clean Hebrew text and handle RTL issues
+    // Clean Hebrew text and handle RTL issues with better encoding
     cleanHebrewText(text) {
         if (!text) return '';
         
-        // Remove any control characters that might interfere with proper display
+        // המרה לstring אם צריך
+        text = String(text);
+        
+        // ניקוי תווי בקרה שיכולים להפריע לתצוגה תקינה
         text = text.replace(/[\u0000-\u001F\u007F-\u009F]/g, '');
         
-        // Handle special RTL markers if needed
+        // הסרת RTL markers מיותרים
         text = text.replace(/[\u200E\u200F\u202A-\u202E]/g, '');
         
-        // Add RTL mark at the beginning of Hebrew text if needed
-        if (this.isHebrewText(text) && !text.startsWith('\u200F')) {
-            text = '\u200F' + text;
+        // תיקון encoding issues נפוצים בעברית
+        text = text.replace(/Ã¢â‚¬â„¢/g, '\''); // smart quote
+        text = text.replace(/Ã¢â‚¬Å"/g, '"');  // smart quote
+        text = text.replace(/Ã—/g, '×'); // multiplication sign confused with Hebrew
+        text = text.replace(/Ã¸/g, 'ø'); // various encoding fixes
+        
+        // תיקון בעיות UTF-8 נפוצות
+        try {
+            // ניסיון לתקן double-encoding אם קיים
+            if (text.includes('Ã')) {
+                const decoded = decodeURIComponent(escape(text));
+                if (this.isHebrewText(decoded)) {
+                    text = decoded;
+                }
+            }
+        } catch (e) {
+            // אם הפענוח נכשל, נשאיר את הטקסט המקורי
         }
         
         return text.trim();
@@ -287,12 +423,31 @@ p {
     isDocxAvailable() {
         try {
             const docx = window.docx;
-            return docx && 
-                   typeof docx.Document === 'function' && 
-                   typeof docx.Paragraph === 'function' && 
-                   typeof docx.TextRun === 'function' &&
-                   typeof docx.Table === 'function' &&
-                   typeof docx.Packer === 'object';
+            
+            // בדיקה בסיסית שהספרייה קיימת
+            if (!docx) {
+                this.log('DOCX library not found in window.docx', 'debug');
+                return false;
+            }
+            
+            // בדיקה שהמחלקות הנדרשות קיימות
+            const requiredClasses = ['Document', 'Paragraph', 'TextRun', 'Table', 'TableRow', 'TableCell'];
+            for (const className of requiredClasses) {
+                if (typeof docx[className] !== 'function') {
+                    this.log(`DOCX class ${className} not available`, 'debug');
+                    return false;
+                }
+            }
+            
+            // בדיקה ש-Packer קיים
+            if (!docx.Packer || typeof docx.Packer.toBuffer !== 'function') {
+                this.log('DOCX Packer not available or invalid', 'debug');
+                return false;
+            }
+            
+            this.log('DOCX library is fully available', 'debug');
+            return true;
+            
         } catch (error) {
             this.log(`DOCX availability check failed: ${error.message}`, 'error');
             return false;
@@ -537,31 +692,43 @@ p {
 
     async downloadDocument(document, fileName) {
         try {
-            const docx = window.docx; // התייחסות לספרייה הגלובלית
+            const docx = window.docx;
             
             if (!docx || !docx.Packer) {
-                throw new Error('DOCX library not properly loaded');
+                throw new Error('DOCX library not properly loaded - Packer unavailable');
             }
             
-            // יצירת הקובץ
-            const buffer = await docx.Packer.toBuffer(document);
+            this.log('Starting document generation with DOCX Packer', 'debug');
+            
+            // יצירת הקובץ עם timeout למניעת hang
+            const buffer = await Promise.race([
+                docx.Packer.toBuffer(document),
+                new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('Document generation timeout')), 30000)
+                )
+            ]);
+            
+            this.log('Document buffer created successfully', 'debug');
             
             // יצירת Blob והורדה
             const blob = new Blob([buffer], {
                 type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
             });
             
-            // Ensure filename has .docx extension
+            // וידוא סיומת קובץ
             if (!fileName.toLowerCase().endsWith('.docx')) {
                 fileName += '.docx';
             }
             
             this.downloadBlob(blob, fileName);
+            this.log(`Document downloaded successfully: ${fileName}`, 'debug');
             
         } catch (error) {
             this.log(`Download failed: ${error.message}`, 'error');
             console.error("DOCX download error details:", error);
-            throw new Error('כשל בהורדת קובץ Word');
+            
+            // במקרה של כשל, נסה fallback
+            throw new Error(`כשל בהורדת קובץ Word: ${error.message}`);
         }
     }
 

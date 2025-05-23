@@ -2,8 +2,26 @@
 
 A modern, client-side web application that converts PDF files to Excel (.xlsx), CSV, or Word (.docx) formats with full Hebrew language support and OCR capabilities.
 
-## 🆕 Latest Updates (v2.1.0)
+# PDF to Excel/CSV/Word Converter with Hebrew OCR Support
 
+A modern, client-side web application that converts PDF files to Excel (.xlsx), CSV, or Word (.docx) formats with full Hebrew language support and OCR capabilities.
+
+## 🆕 Latest Updates (v2.2.0 - May 2025)
+
+### ✅ Major DOCX Export Fixes:
+- **🔧 DOCX Library Upgrade**: Updated to modern docx@8.5.0 with CDN reliability
+- **🔤 Hebrew Encoding Fix**: Resolved gibberish text issues in Hebrew content
+- **📄 Real DOCX Files**: Now generates proper Word documents that open correctly
+- **⚡ Smart Fallback**: Automatic RTF fallback when main library unavailable
+- **🛡️ Error Resilience**: Enhanced error handling with detailed debugging
+
+### 🎯 Performance Improvements:
+- Faster initialization with timeout mechanisms
+- Better console logging for troubleshooting
+- Improved mixed-language text support (Hebrew + English)
+- Enhanced character encoding detection and correction
+
+### 🐛 Previous Updates (v2.1.0):
 - **🛠️ Fixed Error Display**: No more error messages before file selection
 - **📄 Enhanced DOCX Export**: Improved Word document generation with better column structure
 - **📂 Local DOCX Library**: Added local copy of docx.js for reliable functionality
@@ -68,7 +86,7 @@ PDF2XL/
 - **PDF.js v3.11.174**: PDF parsing and rendering (CDN)
 - **Tesseract.js v4.1.1**: OCR with Hebrew language support (CDN)
 - **SheetJS v0.18.5**: Excel file generation (CDN)
-- **DocX v7.8.0**: Word document generation with RTL support (Local copy)
+- **DocX v8.5.0**: Word document generation with RTL support (CDN with fallback)
 - **Bootstrap v5.3.2**: UI framework with RTL support (CDN)
 - **Font Awesome v6.4.0**: Icons (CDN)
 
@@ -125,10 +143,11 @@ To add OCR support for additional languages:
 ### Common Issues:
 
 **DOCX Export Problems:**
-- Word files are generated using HTML fallback if the DOCX library fails to load
-- Files will open in Word with proper structure and RTL support
-- If you have trouble opening the file, try opening it with Microsoft Word directly
-- For best results with Hebrew text, use Microsoft Word or LibreOffice
+- **Fixed in v2.2.0**: Upgraded to modern DOCX library with automatic fallback
+- Files now generate as proper DOCX format that opens correctly in Microsoft Word
+- Hebrew text encoding issues have been resolved
+- If files still don't open, check that you have Microsoft Word or LibreOffice installed
+- For troubleshooting, check browser console for detailed error messages
 
 **OCR Not Working:**
 - Ensure stable internet connection for initial Tesseract download
@@ -244,4 +263,4 @@ For issues and questions:
 
 **Built with ❤️ for the Hebrew-speaking community**
 
-*Last updated: May 2025*
+*Last updated: May 2025 - v2.2.0 with major DOCX improvements*

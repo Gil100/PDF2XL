@@ -30,19 +30,44 @@ class PDFConverterCore {
                 'docx': new DOCXExporter()
             };
 
-            // אתחול מקביל של כל המייצאים
-            const initPromises = Object.values(this.exporters).map(exporter => 
-                exporter.ensureReady().catch(error => {
-                    this.log(`Exporter initialization failed: ${error.message}`, 'warn');
-                })
-            );
+            // אתחול מקביל של כל המייצאים עם timeout
+            const initPromises = Object.entries(this.exporters).map(async ([format, exporter]) => {
+                try {
+                    await Promise.race([
+                        exporter.ensureReady(),
+                        new Promise((_, reject) => 
+                            setTimeout(() => reject(new Error(`${format} exporter timeout`)), 10000)
+                        )
+                    ]);
+                    this.log(`${format} exporter initialized successfully`);
+                } catch (error) {
+                    this.log(`${format} exporter initialization failed: ${error.message}`, 'warn');
+                    // עבור DOCX, זה לא קריטי כי יש fallback
+                    if (format !== 'docx') {
+                        throw error;
+                    }
+                }
+            });
 
             await Promise.allSettled(initPromises);
-            this.log('Exporters initialized');
+            this.log('Exporters initialization completed');
+            
+            // בדיקה מיוחדת עבור DOCX
+            this.checkDOCXAvailability();
             
         } catch (error) {
             this.log(`Failed to initialize exporters: ${error.message}`, 'error');
             this.showError('שגיאה באתחול מודולי הייצוא');
+        }
+    }
+
+    // בדיקת זמינות DOCX
+    checkDOCXAvailability() {
+        const docxExporter = this.exporters.docx;
+        if (docxExporter && docxExporter.isDocxAvailable && docxExporter.isDocxAvailable()) {
+            this.log('DOCX export fully available');
+        } else {
+            this.log('DOCX export will use fallback method', 'warn');
         }
     }
 
