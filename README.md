@@ -2,13 +2,13 @@
 
 A modern, client-side web application that converts PDF files to Excel (.xlsx), CSV, or Word (.docx) formats with full Hebrew language support and OCR capabilities.
 
-## 🆕 Latest Updates (v2.0.0)
+## 🆕 Latest Updates (v2.1.0)
 
-- **🎯 DOCX Export Added**: Full Word document support with Hebrew RTL
-- **🔧 Robust Architecture**: Modular design with automatic fallbacks  
-- **🛡️ Error Resilience**: Multiple CDN sources and RTF fallback for DOCX
-- **🎨 Enhanced UI**: Format-specific options and better user feedback
-- **📚 Comprehensive Docs**: Detailed testing and troubleshooting guides
+- **🛠️ Fixed Error Display**: No more error messages before file selection
+- **📄 Enhanced DOCX Export**: Improved Word document generation with better column structure
+- **📂 Local DOCX Library**: Added local copy of docx.js for reliable functionality
+- **📊 Better Table Structure**: Improved table formatting in DOCX exports
+- **🌐 Increased Reliability**: Better error handling and fallback mechanisms
 
 ## 🌟 Features
 
@@ -47,21 +47,30 @@ A modern, client-side web application that converts PDF files to Excel (.xlsx), 
 
 ```
 PDF2XL/
-├── index.html          # Main application file
-├── styles.css          # Custom styling and RTL support
-├── script.js           # Core functionality and logic
-└── README.md           # This documentation
+├── index.html              # Main application file
+├── styles.css              # Custom styling and RTL support
+├── script.js               # Legacy core functionality
+├── js/                     # Enhanced modular structure
+│   ├── core.js             # Core application logic
+│   ├── libs/               # Local libraries
+│   │   └── docx.js         # Local copy of DOCX library
+│   └── exporters/          # Export modules
+│       ├── base-exporter.js    # Base exporter class
+│       ├── excel-exporter.js   # Excel export functionality
+│       ├── csv-exporter.js     # CSV export functionality
+│       └── docx-exporter.js    # DOCX export functionality
+└── README.md               # This documentation
 ```
 
 ## 🛠️ Technologies Used
 
-### Libraries (CDN-based)
-- **PDF.js v3.11.174**: PDF parsing and rendering
-- **Tesseract.js v4.1.1**: OCR with Hebrew language support
-- **SheetJS v0.18.5**: Excel file generation
-- **DocX v8.5.0**: Word document generation with RTL support
-- **Bootstrap v5.3.2**: UI framework with RTL support
-- **Font Awesome v6.4.0**: Icons
+### Libraries
+- **PDF.js v3.11.174**: PDF parsing and rendering (CDN)
+- **Tesseract.js v4.1.1**: OCR with Hebrew language support (CDN)
+- **SheetJS v0.18.5**: Excel file generation (CDN)
+- **DocX v7.8.0**: Word document generation with RTL support (Local copy)
+- **Bootstrap v5.3.2**: UI framework with RTL support (CDN)
+- **Font Awesome v6.4.0**: Icons (CDN)
 
 ### Browser Requirements
 - Modern browsers with ES6+ support
@@ -116,8 +125,10 @@ To add OCR support for additional languages:
 ### Common Issues:
 
 **DOCX Export Problems:**
-- See our comprehensive [DOCX Troubleshooting Guide](DOCX_TROUBLESHOOTING.md)
-- The app includes automatic RTF fallback for maximum compatibility
+- Word files are generated using HTML fallback if the DOCX library fails to load
+- Files will open in Word with proper structure and RTL support
+- If you have trouble opening the file, try opening it with Microsoft Word directly
+- For best results with Hebrew text, use Microsoft Word or LibreOffice
 
 **OCR Not Working:**
 - Ensure stable internet connection for initial Tesseract download

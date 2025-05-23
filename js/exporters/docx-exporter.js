@@ -15,34 +15,11 @@ class DOCXExporter extends BaseExporter {
             this.docxLoaded = true;
             this.log('DOCX library already loaded');
             return;
+        } else {
+            this.log('DOCX library not loaded from HTML. Using fallback for all exports.');
+            // Instead of trying to load the library, we'll just use the fallback export method
+            this.docxLoaded = false;
         }
-
-        // רשימת CDN לנסות
-        const cdnUrls = [
-            'https://unpkg.com/docx@8.5.0/build/index.js',
-            'https://cdn.skypack.dev/docx@8.5.0',
-            'https://esm.sh/docx@8.5.0'
-        ];
-
-        // ניסיון טעינה מכמה CDN שונים
-        for (const url of cdnUrls) {
-            try {
-                this.log(`Trying to load DOCX from: ${url}`);
-                await this.loadScript(url, 'docx');
-                
-                if (typeof window.docx !== 'undefined') {
-                    this.docxLoaded = true;
-                    this.log('DOCX library loaded successfully from: ' + url);
-                    return;
-                }
-            } catch (error) {
-                this.log(`Failed to load from ${url}: ${error.message}`, 'warn');
-                continue;
-            }
-        }
-
-        // אם כל הניסיונות נכשלו
-        throw new Error('Failed to load DOCX library from all CDN sources');
     }
 
     async export(data, options = {}) {
@@ -106,15 +83,21 @@ class DOCXExporter extends BaseExporter {
             type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
         });
         
-        this.downloadBlob(blob, fileName);
+        // Make sure the file has a .docx extension
+        let safeFileName = fileName;
+        if (!safeFileName.toLowerCase().endsWith('.docx')) {
+            safeFileName += '.docx';
+        }
         
-        this.log(`HTML-Word fallback export completed: ${fileName}`);
+        this.downloadBlob(blob, safeFileName);
+        
+        this.log(`HTML-to-Word fallback export completed: ${safeFileName}`);
         
         return {
             success: true,
-            fileName: fileName,
+            fileName: safeFileName,
             format: 'docx',
-            note: 'הקובץ נוצר ויפתח ב-Word. אם יש בעיות בפורמט, ניתן לבחור ב"שמור בשם" כדי לשמור כ-DOCX רגיל.'
+            note: 'הקובץ נוצר כקובץ Word (מבוסס HTML). אם יש קושי בפתיחה, ניתן לפתוח עם Microsoft Word או LibreOffice.'
         };
     }
 
@@ -210,28 +193,45 @@ p {
     }
 
     createHTMLTable(data, settings) {
-        let table = '<table border="1" cellspacing="0" cellpadding="5" style="mso-table-layout:fixed;">';
+        let table = '<table border="1" cellspacing="0" cellpadding="5" style="width:100%; border-collapse:collapse; table-layout:fixed; direction:' + (settings.rtl ? 'rtl' : 'ltr') + ';">';
         
         // Add column width styles based on content
         table += '<colgroup>';
         const maxCols = Math.max(...data.map(row => row.length));
         for (let i = 0; i < maxCols; i++) {
-            const colWidth = Math.min(Math.max(100 / maxCols, 10), 30);
+            const colWidth = Math.floor(100 / maxCols);
             table += `<col style="width:${colWidth}%;"/>`;
         }
         table += '</colgroup>';
         
-        data.forEach((row, rowIndex) => {
-            const tag = rowIndex === 0 ? 'th' : 'td';
-            table += '<tr>';
-            row.forEach(cell => {
+        // Add header row with different style
+        if (data.length > 0) {
+            table += '<thead style="background-color:#f0f0f0;"><tr>';
+            data[0].forEach(cell => {
                 const cellText = this.escapeHTML(String(cell || ''));
                 const isHebrew = this.isHebrewText(cellText);
-                const dirAttr = isHebrew ? ' dir="rtl"' : '';
-                table += `<${tag}${dirAttr}>${cellText}</${tag}>`;
+                const alignAttr = isHebrew || settings.rtl ? ' align="right"' : ' align="left"';
+                const dirAttr = isHebrew || settings.rtl ? ' dir="rtl"' : '';
+                table += `<th${alignAttr}${dirAttr} style="font-weight:bold;">${cellText}</th>`;
             });
-            table += '</tr>';
-        });
+            table += '</tr></thead>';
+            
+            // Add data rows
+            table += '<tbody>';
+            for (let rowIndex = 1; rowIndex < data.length; rowIndex++) {
+                const row = data[rowIndex];
+                table += '<tr>';
+                row.forEach(cell => {
+                    const cellText = this.escapeHTML(String(cell || ''));
+                    const isHebrew = this.isHebrewText(cellText);
+                    const alignAttr = isHebrew || settings.rtl ? ' align="right"' : ' align="left"';
+                    const dirAttr = isHebrew || settings.rtl ? ' dir="rtl"' : '';
+                    table += `<td${alignAttr}${dirAttr}>${cellText}</td>`;
+                });
+                table += '</tr>';
+            }
+            table += '</tbody>';
+        }
         
         table += '</table>';
         return table;
