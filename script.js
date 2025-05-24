@@ -235,18 +235,31 @@ class PDFConverter {
     // Process a single page
     async processPage(page) {
         try {
+            console.log('Processing page...');
+            
             // Try to extract text directly first
             const textContent = await page.getTextContent();
             
             if (textContent.items.length > 0) {
-                return this.extractTableFromText(textContent);
-            } else {
-                // Fallback to OCR if no text content
-                return await this.extractTableFromOCR(page);
+                console.log('Found', textContent.items.length, 'text items, extracting table...');
+                const tableData = this.extractTableFromText(textContent);
+                
+                // If we got reasonable table data, return it
+                if (tableData && tableData.length > 0 && 
+                    tableData.some(row => row.some(cell => cell.trim().length > 0))) {
+                    console.log('Successfully extracted table from text');
+                    return tableData;
+                }
             }
+            
+            console.log('Text extraction failed or no data, falling back to OCR...');
+            // Fallback to OCR if no text content or extraction failed
+            return await this.extractTableFromOCR(page);
+            
         } catch (error) {
             console.error('Error processing page:', error);
             // Try OCR as fallback
+            console.log('Falling back to OCR due to error...');
             return await this.extractTableFromOCR(page);
         }
     }
@@ -254,46 +267,113 @@ class PDFConverter {
     // Extract table data from text content
     extractTableFromText(textContent) {
         const items = textContent.items;
-        const lines = [];
         
-        // Group text items by Y coordinate (rows)
-        const lineMap = new Map();
+        // Filter out empty or very short text items
+        const validItems = items.filter(item => 
+            item.str && item.str.trim().length > 0
+        );
         
-        items.forEach(item => {
+        if (validItems.length === 0) {
+            return [];
+        }
+        
+        console.log('Processing', validItems.length, 'text items');
+        
+        // Group text items by Y coordinate with tolerance (rows)
+        const yTolerance = 5; // pixels tolerance for same row
+        const rowGroups = [];
+        
+        validItems.forEach(item => {
             const y = Math.round(item.transform[5]);
-            if (!lineMap.has(y)) {
-                lineMap.set(y, []);
+            const x = Math.round(item.transform[4]);
+            
+            // Find existing row group within tolerance
+            let foundGroup = rowGroups.find(group => 
+                Math.abs(group.y - y) <= yTolerance
+            );
+            
+            if (!foundGroup) {
+                foundGroup = { y: y, items: [] };
+                rowGroups.push(foundGroup);
             }
-            lineMap.get(y).push({
-                text: item.str,
-                x: item.transform[4],
-                width: item.width
+            
+            foundGroup.items.push({
+                text: item.str.trim(),
+                x: x,
+                y: y,
+                width: item.width || 0,
+                height: item.height || 0
             });
         });
 
-        // Sort lines by Y coordinate (top to bottom)
-        const sortedLines = Array.from(lineMap.entries())
-            .sort((a, b) => b[0] - a[0]) // Descending Y (top to bottom)
-            .map(([y, lineItems]) => {
-                // Sort items in each line by X coordinate (left to right)
-                return lineItems.sort((a, b) => a.x - b.x);
-            });
-
-        // Convert to table format
+        // Sort rows by Y coordinate (top to bottom)
+        rowGroups.sort((a, b) => b.y - a.y);
+        
+        // Process each row to detect columns
         const tableData = [];
-        sortedLines.forEach(lineItems => {
-            const row = [];
-            lineItems.forEach(item => {
-                if (item.text.trim()) {
-                    row.push(item.text.trim());
-                }
-            });
-            if (row.length > 0) {
+        
+        rowGroups.forEach((rowGroup, rowIndex) => {
+            // Sort items in row by X coordinate (left to right for LTR, right to left for RTL)
+            const sortedItems = rowGroup.items.sort((a, b) => a.x - b.x);
+            
+            // Detect if this is a table row by checking spacing patterns
+            const row = this.processRowItems(sortedItems);
+            
+            if (row && row.length > 0) {
                 tableData.push(row);
+                console.log(`Row ${rowIndex + 1}:`, row);
             }
         });
 
+        console.log('Extracted table data:', tableData);
         return this.normalizeTable(tableData);
+    }
+    
+    // Process items in a single row to detect columns
+    processRowItems(items) {
+        if (items.length === 0) return [];
+        
+        if (items.length === 1) {
+            return [items[0].text];
+        }
+        
+        // Calculate gaps between text items to detect column boundaries
+        const gaps = [];
+        for (let i = 0; i < items.length - 1; i++) {
+            const currentItem = items[i];
+            const nextItem = items[i + 1];
+            const gap = nextItem.x - (currentItem.x + currentItem.width);
+            gaps.push(gap);
+        }
+        
+        // Determine significant gaps (potential column separators)
+        const avgGap = gaps.reduce((sum, gap) => sum + gap, 0) / gaps.length;
+        const significantGapThreshold = Math.max(avgGap * 1.5, 20); // At least 20 pixels or 1.5x average
+        
+        // Group items into columns based on significant gaps
+        const columns = [];
+        let currentColumn = [items[0]];
+        
+        for (let i = 0; i < gaps.length; i++) {
+            if (gaps[i] > significantGapThreshold) {
+                // Significant gap - start new column
+                columns.push(currentColumn);
+                currentColumn = [items[i + 1]];
+            } else {
+                // Same column - add to current
+                currentColumn.push(items[i + 1]);
+            }
+        }
+        
+        // Add the last column
+        if (currentColumn.length > 0) {
+            columns.push(currentColumn);
+        }
+        
+        // Convert columns to text
+        return columns.map(column => {
+            return column.map(item => item.text).join(' ').trim();
+        });
     }
 
     // Extract table data using OCR
@@ -328,34 +408,173 @@ class PDFConverter {
 
     // Parse OCR text into table format
     parseOCRText(text) {
+        console.log('Parsing OCR text:', text.substring(0, 200) + '...');
+        
         const lines = text.split('\n').filter(line => line.trim());
         const tableData = [];
 
-        lines.forEach(line => {
-            // Split by multiple spaces or tabs to detect columns
-            const cells = line.split(/\s{2,}|\t/).filter(cell => cell.trim());
+        lines.forEach((line, lineIndex) => {
+            // Try multiple column detection methods
+            let cells = [];
+            
+            // Method 1: Split by multiple spaces or tabs
+            cells = line.split(/\s{3,}|\t/).filter(cell => cell.trim());
+            
+            // Method 2: If we didn't get good separation, try other patterns
+            if (cells.length <= 1) {
+                // Look for common separators
+                const separators = ['|', ':', ';', ','];
+                for (const separator of separators) {
+                    if (line.includes(separator)) {
+                        const testCells = line.split(separator).filter(cell => cell.trim());
+                        if (testCells.length > cells.length) {
+                            cells = testCells;
+                        }
+                    }
+                }
+            }
+            
+            // Method 3: For Hebrew text, try detecting word boundaries better
+            if (cells.length <= 1 && /[\u0590-\u05FF]/.test(line)) {
+                // Hebrew text - look for patterns like numbers followed by text
+                const hebrewPattern = /(\d+(?:\.\d+)?)\s*([\u0590-\u05FF\s]+)/g;
+                const matches = [];
+                let match;
+                
+                while ((match = hebrewPattern.exec(line)) !== null) {
+                    matches.push(match[1], match[2].trim());
+                }
+                
+                if (matches.length > 0) {
+                    cells = matches;
+                }
+            }
+            
+            // Clean and add cells
             if (cells.length > 0) {
-                tableData.push(cells.map(cell => cell.trim()));
+                const cleanCells = cells.map(cell => cell.trim()).filter(cell => cell.length > 0);
+                if (cleanCells.length > 0) {
+                    tableData.push(cleanCells);
+                    console.log(`OCR Line ${lineIndex + 1}:`, cleanCells);
+                }
             }
         });
 
+        console.log('OCR extracted', tableData.length, 'rows');
         return this.normalizeTable(tableData);
     }
 
-    // Normalize table data (ensure consistent column count)
+    // Normalize table data (ensure consistent column count and clean data)
     normalizeTable(tableData) {
         if (tableData.length === 0) return [];
 
-        // Find maximum column count
-        const maxColumns = Math.max(...tableData.map(row => row.length));
+        console.log('Normalizing table with', tableData.length, 'rows');
         
-        // Pad rows to have consistent column count
-        return tableData.map(row => {
-            while (row.length < maxColumns) {
-                row.push('');
+        // Remove completely empty rows
+        const nonEmptyRows = tableData.filter(row => 
+            row.some(cell => cell && cell.trim().length > 0)
+        );
+        
+        if (nonEmptyRows.length === 0) return [];
+        
+        // Find maximum column count
+        const maxColumns = Math.max(...nonEmptyRows.map(row => row.length));
+        console.log('Maximum columns detected:', maxColumns);
+        
+        // Analyze column patterns to detect headers vs data
+        const normalizedTable = nonEmptyRows.map((row, rowIndex) => {
+            // Pad row to have consistent column count
+            const paddedRow = [...row];
+            while (paddedRow.length < maxColumns) {
+                paddedRow.push('');
             }
-            return row;
+            
+            // Clean cell data
+            return paddedRow.map(cell => {
+                if (!cell) return '';
+                
+                // Clean up the cell content
+                let cleanCell = cell.toString().trim();
+                
+                // Remove extra whitespace
+                cleanCell = cleanCell.replace(/\s+/g, ' ');
+                
+                // Handle common OCR errors for Hebrew
+                cleanCell = cleanCell.replace(/[״"]/g, '"'); // Normalize quotes
+                cleanCell = cleanCell.replace(/[׳']/g, "'"); // Normalize apostrophes
+                
+                return cleanCell;
+            });
         });
+        
+        // Try to detect and merge header rows that might be split
+        const mergedTable = this.mergeHeaderRows(normalizedTable);
+        
+        console.log('Normalized table:', mergedTable);
+        return mergedTable;
+    }
+    
+    // Merge potential split header rows
+    mergeHeaderRows(tableData) {
+        if (tableData.length < 2) return tableData;
+        
+        const result = [...tableData];
+        
+        // Check if first few rows might be split headers
+        for (let i = 0; i < Math.min(3, result.length - 1); i++) {
+            const currentRow = result[i];
+            const nextRow = result[i + 1];
+            
+            // Check if rows should be merged (e.g., header split across multiple lines)
+            if (this.shouldMergeRows(currentRow, nextRow)) {
+                // Merge the rows
+                const mergedRow = currentRow.map((cell, colIndex) => {
+                    const currentCell = cell || '';
+                    const nextCell = nextRow[colIndex] || '';
+                    
+                    if (!currentCell && nextCell) return nextCell;
+                    if (currentCell && !nextCell) return currentCell;
+                    if (!currentCell && !nextCell) return '';
+                    
+                    // Both have content - combine with space
+                    return `${currentCell} ${nextCell}`.trim();
+                });
+                
+                result[i] = mergedRow;
+                result.splice(i + 1, 1); // Remove the merged row
+                i--; // Recheck from same position
+            }
+        }
+        
+        return result;
+    }
+    
+    // Determine if two rows should be merged
+    shouldMergeRows(row1, row2) {
+        if (!row1 || !row2) return false;
+        
+        let emptyInFirst = 0;
+        let emptyInSecond = 0;
+        let bothHaveContent = 0;
+        
+        const maxLength = Math.max(row1.length, row2.length);
+        
+        for (let i = 0; i < maxLength; i++) {
+            const cell1 = (row1[i] || '').trim();
+            const cell2 = (row2[i] || '').trim();
+            
+            if (!cell1 && cell2) emptyInFirst++;
+            else if (cell1 && !cell2) emptyInSecond++;
+            else if (cell1 && cell2) bothHaveContent++;
+        }
+        
+        // Merge if they complement each other (one has content where other is empty)
+        // and there's not too much overlap
+        const totalCells = maxLength;
+        const complementary = (emptyInFirst + emptyInSecond) / totalCells;
+        const overlap = bothHaveContent / totalCells;
+        
+        return complementary > 0.5 && overlap < 0.3;
     }
 
     // Validate data

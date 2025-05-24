@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+    <meta charset="UTF-8">
+    <title>בדיקת דוח כספי עברי - PDF2XL Test</title>
+    <style>
+        body {
+            font-family: 'David', 'Arial Hebrew', serif;
+            direction: rtl;
+            text-align: right;
+            margin: 20px;
+            line-height: 1.8;
+            font-size: 14px;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+            margin-bottom: 30px;
+        }
+        
+        .test-info {
+            background: #f8f9fa;
+            padding: 15px;
+            border-right: 4px solid #28a745;
+            margin-bottom: 20px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            direction: rtl;
+            font-size: 14px;
+        }
+        
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px 8px;
+            text-align: right;
+            vertical-align: top;
+        }
+        
+        th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        .number {
+            text-align: left;
+            direction: ltr;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+        }
+        
+        .total {
+            font-weight: bold;
+            background-color: #e8f4f8;
+        }
+        
+        .negative {
+            color: #dc3545;
+        }
+        
+        .positive {
+            color: #28a745;
+        }
+    </style>
+</head>
+<body>
+    <h1>דוח מאזן - בדיקה לשיפורי OCR</h1>
+    
+    <div class="test-info">
+        <strong>מטרת הבדיקה:</strong> לוודא שהשיפורים החדשים לעיבוד עברית עובדים תקין<br>
+        <strong>תאריך:</strong> 31 בדצמבר 2023<br>
+        <strong>חברה:</strong> חברת בדיקה בע"מ
+    </div>
+    
+    <table>
+        <thead>
+            <tr>
+                <th>פריט</th>
+                <th>סכום (באלפי ש"ח)</th>
+                <th>אחוז</th>
+                <th>הערות</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>רכוש שוטף</td>
+                <td class="number positive">1,250</td>
+                <td class="number">45%</td>
+                <td>כולל מלאי ולקוחות</td>
+            </tr>
+            <tr>
+                <td>רכוש קבוע</td>
+                <td class="number positive">1,530</td>
+                <td class="number">55%</td>
+                <td>ציוד ומבנים</td>
+            </tr>
+            <tr class="total">
+                <td>סך הכל רכוש</td>
+                <td class="number positive">2,780</td>
+                <td class="number">100%</td>
+                <td>סך מאזן</td>
+            </tr>
+            <tr>
+                <td>התחייבויות שוטפות</td>
+                <td class="number negative">(680)</td>
+                <td class="number">24%</td>
+                <td>ספקים והלוואות קצרות טווח</td>
+            </tr>
+            <tr>
+                <td>התחייבויות ארוכות טווח</td>
+                <td class="number negative">(900)</td>
+                <td class="number">32%</td>
+                <td>הלוואות בנק</td>
+            </tr>
+            <tr>
+                <td>הון עצמי</td>
+                <td class="number positive">1,200</td>
+                <td class="number">43%</td>
+                <td>הון המניות ורווח נקי</td>
+            </tr>
+            <tr class="total">
+                <td>סך הכל התחייבויות והון</td>
+                <td class="number positive">2,780</td>
+                <td class="number">100%</td>
+                <td>סך מאזן</td>
+            </tr>
+        </tbody>
+    </table>
+    
+    <h2>פירוט נוסף</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>תיאור</th>
+                <th>2023</th>
+                <th>2022</th>
+                <th>שינוי</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>מזומנים ושווי מזומנים</td>
+                <td class="number">420</td>
+                <td class="number">380</td>
+                <td class="number positive">+10.5%</td>
+            </tr>
+            <tr>
+                <td>לקוחות</td>
+                <td class="number">580</td>
+                <td class="number">520</td>
+                <td class="number positive">+11.5%</td>
+            </tr>
+            <tr>
+                <td>מלאי</td>
+                <td class="number">250</td>
+                <td class="number">280</td>
+                <td class="number negative">-10.7%</td>
+            </tr>
+        </tbody>
+    </table>
+    
+    <p style="margin-top: 30px; font-size: 12px; color: #666;">
+        <strong>הערות:</strong><br>
+        1. כל הסכומים באלפי שקלים חדשים<br>
+        2. הדוח נערך לפי תקני חשבונאות ישראליים<br>
+        3. הנתונים נבדקו ואושרו על ידי רואה חשבון
+    </p>
+</body>
+</html>

@@ -21,15 +21,6 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <!-- Custom CSS -->
     <link href="styles.css" rel="stylesheet">
-    
-    <!-- PDF.js -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-    <!-- Tesseract.js for OCR -->
-    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4.1.1/dist/tesseract.min.js"></script>
-    <!-- SheetJS for Excel generation -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </head>
 <body>
     <div class="container-fluid">
@@ -40,6 +31,24 @@
                 <p class="mb-0">תמיכה מלאה בעברית עם OCR מתקדם + תמיכה ב-DOCX</p>
             </div>
         </header>
+
+        <!-- Debug Console (for troubleshooting) -->
+        <div class="row mb-3" id="debugSection" style="display: none;">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0"><i class="fas fa-bug"></i> קונסול Debug</h6>
+                        <div>
+                            <button id="clearDebugBtn" class="btn btn-sm btn-outline-dark me-2">נקה</button>
+                            <button id="toggleDebugBtn" class="btn btn-sm btn-outline-dark">הסתר</button>
+                        </div>
+                    </div>
+                    <div class="card-body" style="max-height: 300px; overflow-y: auto;">
+                        <div id="debugLog" class="font-monospace small" style="white-space: pre-wrap;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <!-- Main Content -->
         <main class="row">
@@ -98,22 +107,6 @@
                                         <option value="heb">עברית בלבד</option>
                                         <option value="eng">אנגלית בלבד</option>
                                     </select>
-                                </div>
-                            </div>
-                            <div class="row mt-3">
-                                <div class="col-12">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="preserveFormatting" checked>
-                                        <label class="form-check-label" for="preserveFormatting">
-                                            שמור עיצוב טבלאות (עמודות ושורות)
-                                        </label>
-                                    </div>
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="dataValidation" checked>
-                                        <label class="form-check-label" for="dataValidation">
-                                            אמת נתונים אוטומטית
-                                        </label>
-                                    </div>
                                 </div>
                             </div>
 
@@ -200,11 +193,14 @@
 
                         <!-- Process Button -->
                         <div class="text-center mt-4">
-                            <button id="processBtn" class="btn btn-primary btn-lg me-2" disabled>
+                            <button id="processBtn" class="btn btn-primary btn-lg me-2" style="display: none;">
                                 <i class="fas fa-cogs"></i> התחל עיבוד
                             </button>
                             <button id="newFileBtn" class="btn btn-outline-secondary btn-lg" style="display: none;">
                                 <i class="fas fa-plus"></i> קובץ חדש
+                            </button>
+                            <button id="showDebugBtn" class="btn btn-outline-warning btn-sm mt-2" onclick="toggleDebugConsole()">
+                                <i class="fas fa-bug"></i> הצג Debug
                             </button>
                         </div>
                     </div>
@@ -219,18 +215,18 @@
                     </div>
                     <div class="card-body">
                         <!-- Progress Section -->
-                        <div id="progressSection" class="progress-section mb-4" style="display: none;">
+                        <div id="progressContainer" class="progress-section mb-4" style="display: none;">
                             <h5>התקדמות עיבוד</h5>
                             <div class="progress mb-2">
                                 <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" 
                                      role="progressbar" style="width: 0%"></div>
                             </div>
-                            <div id="progressText" class="text-center small text-muted"></div>
+                            <div id="progressMessage" class="text-center small text-muted"></div>
                             <div id="currentFile" class="text-center mt-2"></div>
                         </div>
 
-                        <!-- Preview Table -->
-                        <div id="previewSection" style="display: none;">
+                        <!-- Results Section -->
+                        <div id="resultsContainer" style="display: none;">
                             <h5>תצוגה מקדימה</h5>
                             <div class="table-responsive" style="max-height: 400px;">
                                 <table id="previewTable" class="table table-striped table-sm">
@@ -239,25 +235,22 @@
                                 </table>
                             </div>
                             
-                            <!-- Data Validation Results -->
-                            <div id="validationResults" class="mt-3"></div>
-                            
                             <!-- Download Buttons -->
-                            <div class="text-center mt-4">
-                                <button id="downloadBtn" class="btn btn-success me-2" style="display: none;">
+                            <div id="downloadContainer" class="text-center mt-4" style="display: none;">
+                                <button id="downloadBtn" class="btn btn-success me-2">
                                     <i class="fas fa-download"></i> הורד קובץ
                                 </button>
                                 <button id="downloadAllBtn" class="btn btn-info me-2" style="display: none;">
                                     <i class="fas fa-download"></i> הורד הכל כ-ZIP
                                 </button>
-                                <button id="newFileBtn2" class="btn btn-outline-primary" style="display: none;">
+                                <button id="newFileBtn2" class="btn btn-outline-primary">
                                     <i class="fas fa-plus"></i> קובץ חדש
                                 </button>
                             </div>
                         </div>
 
                         <!-- Error Display -->
-                        <div id="errorSection" class="alert alert-danger" style="display: none;">
+                        <div id="errorContainer" class="alert alert-danger" style="display: none;">
                             <h5><i class="fas fa-exclamation-triangle"></i> שגיאה</h5>
                             <p id="errorMessage">אנא בחר קובץ PDF להמשך</p>
                         </div>
@@ -287,82 +280,36 @@
         </footer>
     </div>
 
-    <!-- PDF.js -->
+    <!-- External Libraries - Load First -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-    <!-- Tesseract.js for OCR -->
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4.1.1/dist/tesseract.min.js"></script>
-    <!-- SheetJS for Excel generation -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <!-- DOCX library for Word documents - Enhanced loading with proper CDN -->
-    <script>
-        // Enhanced DOCX library loading with better error handling
-        (function() {
-            console.log('[PDFConverter] Initializing DOCX library loading...');
-            
-            const docxSources = [
-                // Primary CDN - unpkg with UMD build
-                'https://unpkg.com/docx@8.5.0/build/index.umd.js',
-                // Secondary CDN - jsDelivr
-                'https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js',
-                // Fallback CDN - with different version
-                'https://unpkg.com/docx@7.8.0/build/index.umd.js',
-                // Local fallback
-                'js/libs/docx.js'
-            ];
-            
-            let currentIndex = 0;
-            let loadTimeout;
-            
-            function loadNext() {
-                if (currentIndex >= docxSources.length) {
-                    console.error('[PDFConverter] All DOCX sources failed. DOCX export will use RTF fallback.');
-                    window.docxLoadFailed = true;
-                    return;
-                }
-                
-                const script = document.createElement('script');
-                script.src = docxSources[currentIndex];
-                script.async = false; // Ensure synchronous loading
-                
-                // Add timeout for each load attempt
-                loadTimeout = setTimeout(() => {
-                    console.warn(`[PDFConverter] Timeout loading DOCX from: ${docxSources[currentIndex]}`);
-                    script.onerror();
-                }, 10000);
-                
-                script.onload = function() {
-                    clearTimeout(loadTimeout);
-                    console.log(`[PDFConverter] ✅ DOCX library loaded successfully from: ${docxSources[currentIndex]}`);
-                    
-                    // Verify the library loaded correctly
-                    setTimeout(() => {
-                        if (typeof window.docx !== 'undefined' && window.docx.Document) {
-                            console.log('[PDFConverter] ✅ DOCX library verified - Document class available');
-                            window.docxLoadSuccess = true;
-                        } else {
-                            console.warn('[PDFConverter] ⚠️ DOCX library loaded but Document class not found');
-                            window.docxLoadFailed = true;
-                        }
-                    }, 100);
-                };
-                
-                script.onerror = function() {
-                    clearTimeout(loadTimeout);
-                    console.warn(`[PDFConverter] ❌ Failed to load DOCX from: ${docxSources[currentIndex]}`);
-                    currentIndex++;
-                    setTimeout(loadNext, 100); // Small delay before next attempt
-                };
-                
-                document.head.appendChild(script);
-            }
-            
-            loadNext();
-        })();
-    </script>
-    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     
-    <!-- Core application modules -->
+    <!-- DOCX library with enhanced loading -->
+    <script>
+        console.log('[PDFConverter] Loading DOCX library...');
+        
+        // Enhanced DOCX library loading
+        const script = document.createElement('script');
+        script.src = 'https://unpkg.com/docx@8.5.0/build/index.umd.js';
+        script.async = false;
+        
+        script.onload = function() {
+            console.log('[PDFConverter] ✅ DOCX library loaded successfully');
+            window.docxLoadSuccess = true;
+        };
+        
+        script.onerror = function() {
+            console.warn('[PDFConverter] ❌ DOCX library failed to load - will use RTF fallback');
+            window.docxLoadFailed = true;
+        };
+        
+        document.head.appendChild(script);
+    </script>
+    
+    <!-- Core Application Modules - Load in Order -->
+    <script src="js/image-processor.js"></script>
     <script src="js/exporters/base-exporter.js"></script>
     <script src="js/exporters/excel-exporter.js"></script>
     <script src="js/exporters/csv-exporter.js"></script>
@@ -370,68 +317,163 @@
     <script src="js/exporters/docx-exporter.js"></script>
     <script src="js/core.js"></script>
 
-    <!-- Application initialization -->
+    <!-- Application Initialization -->
     <script>
+        // Debug Console Functions
+        window.toggleDebugConsole = function() {
+            const debugSection = document.getElementById('debugSection');
+            const showDebugBtn = document.getElementById('showDebugBtn');
+            
+            if (debugSection.style.display === 'none') {
+                debugSection.style.display = 'block';
+                showDebugBtn.innerHTML = '<i class="fas fa-bug"></i> הסתר Debug';
+            } else {
+                debugSection.style.display = 'none';
+                showDebugBtn.innerHTML = '<i class="fas fa-bug"></i> הצג Debug';
+            }
+        }
+        
+        window.addDebugLog = function(message, level = 'info') {
+            const debugLog = document.getElementById('debugLog');
+            if (!debugLog) return;
+            
+            const timestamp = new Date().toLocaleTimeString('he-IL');
+            const levelColors = {
+                'info': 'text-primary',
+                'warn': 'text-warning', 
+                'error': 'text-danger',
+                'debug': 'text-muted',
+                'success': 'text-success'
+            };
+            
+            const colorClass = levelColors[level] || 'text-dark';
+            const logEntry = document.createElement('div');
+            logEntry.className = colorClass;
+            logEntry.textContent = `[${timestamp}] ${level.toUpperCase()}: ${message}`;
+            
+            debugLog.appendChild(logEntry);
+            debugLog.scrollTop = debugLog.scrollHeight;
+        }
+        
+        window.clearDebugLog = function() {
+            const debugLog = document.getElementById('debugLog');
+            if (debugLog) {
+                debugLog.innerHTML = '';
+            }
+        }
+        
         // Configure PDF.js worker
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
         
-        // Initialize the converter when DOM is loaded
-        document.addEventListener('DOMContentLoaded', () => {
-            // Wait a bit for all scripts to load
-            setTimeout(() => {
-                try {
-                    // Check if all required classes are available
-                    if (typeof BaseExporter === 'undefined') {
-                        console.error('BaseExporter not loaded');
-                        return;
-                    }
-                    if (typeof ExcelExporter === 'undefined') {
-                        console.error('ExcelExporter not loaded');
-                        return;
-                    }
-                    if (typeof CSVExporter === 'undefined') {
-                        console.error('CSVExporter not loaded');
-                        return;
-                    }
-                    if (typeof DOCXExporter === 'undefined') {
-                        console.error('DOCXExporter not loaded');
-                        return;
-                    }
-                    if (typeof PDFConverterCore === 'undefined') {
-                        console.error('PDFConverterCore not loaded');
-                        return;
-                    }
-
-                    window.converter = new PDFConverterCore();
-                    console.log('PDF Converter with DOCX support initialized successfully!');
-                } catch (error) {
-                    console.error('Error initializing converter:', error);
-                    // Try to initialize with a delay if there are dependency issues
-                    setTimeout(() => {
-                        try {
-                            window.converter = new PDFConverterCore();
-                            console.log('PDF Converter initialized with delay');
-                        } catch (retryError) {
-                            console.error('Failed to initialize converter even with delay:', retryError);
-                        }
-                    }, 2000);
+        // Safe initialization with proper dependency checking
+        function initializeConverter() {
+            console.log('[PDFConverter] Starting initialization...');
+            
+            // Check all required dependencies
+            const dependencies = [
+                { name: 'pdfjsLib', obj: window.pdfjsLib },
+                { name: 'Tesseract', obj: window.Tesseract },
+                { name: 'XLSX', obj: window.XLSX },
+                { name: 'ImageProcessor', obj: window.ImageProcessor },
+                { name: 'BaseExporter', obj: window.BaseExporter },
+                { name: 'ExcelExporter', obj: window.ExcelExporter },
+                { name: 'CSVExporter', obj: window.CSVExporter },
+                { name: 'DOCXExporter', obj: window.DOCXExporter },
+                { name: 'PDFConverterCore', obj: window.PDFConverterCore }
+            ];
+            
+            const missing = dependencies.filter(dep => typeof dep.obj === 'undefined');
+            
+            if (missing.length > 0) {
+                console.error('[PDFConverter] Missing dependencies:', missing.map(d => d.name));
+                
+                const errorContainer = document.getElementById('errorContainer');
+                const errorMessage = document.getElementById('errorMessage');
+                
+                if (errorContainer && errorMessage) {
+                    errorMessage.textContent = `שגיאה בטעינת המערכת: חסרים מודולים - ${missing.map(d => d.name).join(', ')}`;
+                    errorContainer.style.display = 'block';
                 }
-            }, 500);
+                return false;
+            }
+            
+            try {
+                // Initialize the main converter
+                window.pdfConverter = new PDFConverterCore();
+                console.log('[PDFConverter] ✅ PDF Converter with advanced OCR support initialized successfully!');
+                
+                // Hide any error messages
+                const errorContainer = document.getElementById('errorContainer');
+                if (errorContainer) {
+                    errorContainer.style.display = 'none';
+                }
+                
+                return true;
+                
+            } catch (error) {
+                console.error('[PDFConverter] Initialization failed:', error);
+                
+                const errorContainer = document.getElementById('errorContainer');
+                const errorMessage = document.getElementById('errorMessage');
+                
+                if (errorContainer && errorMessage) {
+                    errorMessage.textContent = `שגיאה באתחול המערכת: ${error.message}`;
+                    errorContainer.style.display = 'block';
+                }
+                return false;
+            }
+        }
+        
+        // Try to initialize when DOM is ready
+        document.addEventListener('DOMContentLoaded', () => {
+            // Setup debug console event listeners
+            const clearDebugBtn = document.getElementById('clearDebugBtn');
+            const toggleDebugBtn = document.getElementById('toggleDebugBtn');
+            
+            if (clearDebugBtn) {
+                clearDebugBtn.addEventListener('click', clearDebugLog);
+            }
+            
+            if (toggleDebugBtn) {
+                toggleDebugBtn.addEventListener('click', () => {
+                    const debugSection = document.getElementById('debugSection');
+                    debugSection.style.display = 'none';
+                    const showDebugBtn = document.getElementById('showDebugBtn');
+                    if (showDebugBtn) {
+                        showDebugBtn.innerHTML = '<i class="fas fa-bug"></i> הצג Debug';
+                    }
+                });
+            }
+            
+            // Wait a moment for all scripts to load
+            setTimeout(() => {
+                const success = initializeConverter();
+                
+                if (!success) {
+                    // Retry after a longer delay
+                    console.log('[PDFConverter] Retrying initialization in 3 seconds...');
+                    setTimeout(() => {
+                        initializeConverter();
+                    }, 3000);
+                }
+            }, 1000);
         });
 
-        // Error handling for uncaught errors
+        // Global error handling
         window.addEventListener('error', (event) => {
-            console.error('Uncaught error:', event.error);
-            if (window.converter) {
-                window.converter.showError('שגיאה לא צפויה. אנא נסה שוב.');
+            console.error('[PDFConverter] Uncaught error:', event.error);
+            
+            if (window.pdfConverter && typeof window.pdfConverter.showError === 'function') {
+                window.pdfConverter.showError('שגיאה לא צפויה. אנא רענן את הדף ונסה שוב.');
             }
         });
 
         // Handle promise rejections
         window.addEventListener('unhandledrejection', (event) => {
-            console.error('Unhandled promise rejection:', event.reason);
-            if (window.converter) {
-                window.converter.showError('שגיאה בעיבוד. אנא נסה שוב.');
+            console.error('[PDFConverter] Unhandled promise rejection:', event.reason);
+            
+            if (window.pdfConverter && typeof window.pdfConverter.showError === 'function') {
+                window.pdfConverter.showError('שגיאה בעיבוד. אנא נסה שוב.');
             }
             event.preventDefault();
         });

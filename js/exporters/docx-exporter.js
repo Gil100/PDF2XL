@@ -103,6 +103,24 @@ class DOCXExporter extends BaseExporter {
     async exportWithFallback(data, options = {}) {
         this.log('Using enhanced RTF-to-Word fallback export method', 'warn');
         
+        try {
+            // נסיון להשתמש ב-SimpleDOCXFallback אם זמין
+            if (typeof SimpleDOCXFallback !== 'undefined') {
+                const fallbackExporter = new SimpleDOCXFallback();
+                let fileName = options.fileName || this.generateFileName('converted_data', 'docx');
+                
+                const normalizedData = this.normalizeData(data);
+                if (!normalizedData || normalizedData.length === 0) {
+                    throw new Error('אין נתונים לייצוא');
+                }
+                
+                return fallbackExporter.exportAsRTF(normalizedData, fileName, options);
+            }
+        } catch (fallbackError) {
+            this.log(`SimpleDOCXFallback failed: ${fallbackError.message}`, 'warn');
+        }
+        
+        // fallback של fallback - שיטה פשוטה מאוד
         let fileName = options.fileName || this.generateFileName('converted_data', 'docx');
         
         // וידוא שהקובץ יקבל סיומת .docx
